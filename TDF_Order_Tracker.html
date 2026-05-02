@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Deco Furns — Order Tracker (Est. 1954)</title>
+<!-- Firebase SDK (loaded only when cloud sync is enabled by user) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+ /* ============== TDF Brand Theme — Professional Serif ============== */
+ :root{
+ --brand:#5a2c20; /* deeper, classical brown */
+ --brand-dark:#3d1d15;
+ --brand-light:#8a4a38;
+ --gold:#a98c4f;
+ --cream:#f7f1e6;
+ --paper:#ffffff;
+ --ink:#1f1410;
+ --muted:#6e6056;
+ --line:#ddd2bf;
+ --ok:#2d6b3c;
+ --warn:#a86a1a;
+ --danger:#9b1c20;
+ --info:#1f4378;
+ --shadow:0 1px 3px rgba(40,20,10,.06), 0 1px 2px rgba(40,20,10,.04);
+ --shadow-lg:0 4px 14px rgba(40,20,10,.10);
+ --font:Arial, "Helvetica Neue", Helvetica, sans-serif;
+ }
+ *{box-sizing:border-box}
+ html,body{margin:0;padding:0;font-family:var(--font);background:var(--cream);color:var(--ink);font-size:15px;line-height:1.5;}
+ button{font-family:var(--font);cursor:pointer;font-size:14px}
+ input,select,textarea{font-family:var(--font);font-size:14px;color:var(--ink)}
+ a{color:var(--brand);text-decoration:none;border-bottom:1px solid transparent}
+ a:hover{border-bottom-color:var(--brand)}
+ .hidden{display:none!important}
+ .caps{text-transform:uppercase;letter-spacing:1.5px;font-size:11px;font-weight:700}
+ .alert-tag{display:inline-block;font-weight:700;letter-spacing:1.5px;font-size:10px;text-transform:uppercase;padding:2px 8px;border:1px solid currentColor;border-radius:2px;margin-right:8px;}
+
+ /* ============== Login Screen ============== */
+ .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;
+ background:radial-gradient(ellipse at top,#fff8ee 0%,var(--cream) 60%,#efe2d0 100%);}
+ .login-card{background:var(--paper);width:380px;padding:36px 32px;border-radius:14px;
+ box-shadow:var(--shadow-lg);border:1px solid var(--line);text-align:center;}
+ .login-card h1{font-size:24px;color:var(--brand);margin:6px 0 0;letter-spacing:2px;font-weight:600;text-transform:uppercase}
+ .login-card .est{color:var(--gold);font-size:10px;letter-spacing:4px;margin-bottom:18px;text-transform:uppercase}
+ .login-card h2{font-size:13px;color:var(--muted);font-weight:400;margin:0 0 22px;font-style:italic;letter-spacing:.5px}
+ .login-card .logo{width:64px;height:64px;margin:0 auto 8px;border-radius:50%;
+ background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;
+ font-size:22px;font-weight:700;letter-spacing:1px;border:3px solid var(--gold);}
+ .field{text-align:left;margin-bottom:14px}
+ .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+ .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);
+ border-radius:8px;background:#fff;outline:none;transition:.15s}
+ .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(122,62,46,.12)}
+ .btn{padding:10px 18px;border:none;border-radius:8px;font-weight:600;font-size:14px;transition:.15s;
+ display:inline-flex;align-items:center;gap:6px;}
+ .btn-primary{background:var(--brand);color:#fff}
+ .btn-primary:hover{background:var(--brand-dark)}
+ .btn-secondary{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+ .btn-secondary:hover{background:var(--cream)}
+ .btn-danger{background:var(--danger);color:#fff}
+ .btn-danger:hover{background:#9a1f23}
+ .btn-success{background:var(--ok);color:#fff}
+ .btn-warn{background:var(--warn);color:#fff}
+ .btn-ghost{background:transparent;color:var(--muted)}
+ .btn-ghost:hover{color:var(--ink);background:#f3ebdf}
+ .btn-full{width:100%;justify-content:center}
+ .login-card .btn{margin-top:6px}
+ .login-hint{margin-top:18px;font-size:12px;color:var(--muted);background:#fff8ee;padding:10px;border-radius:8px;line-height:1.5}
+ .login-hint b{color:var(--brand)}
+ .login-error{color:var(--danger);font-size:13px;margin-top:8px;display:none}
+
+ /* ============== App Shell ============== */
+ .app{display:none;min-height:100vh;}
+ .topbar{height:58px;background:var(--brand);color:#fff;display:flex;align-items:center;
+ padding:0 22px;box-shadow:var(--shadow);position:sticky;top:0;z-index:50;}
+ .topbar .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.5px}
+ .topbar .brand-logo{width:34px;height:34px;border-radius:50%;background:#fff;color:var(--brand);
+ display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:2px solid var(--gold);}
+ .topbar .est{font-size:9px;letter-spacing:3px;color:var(--gold);margin-left:4px;text-transform:uppercase}
+ .topbar .brand > div > div:first-child{font-style:italic;letter-spacing:1px}
+ .topbar .spacer{flex:1}
+ .topbar .user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);
+ padding:6px 12px;border-radius:20px;font-size:13px}
+ .topbar .user-chip .role-badge{background:var(--gold);color:var(--brand-dark);padding:2px 8px;
+ border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.5px}
+ .topbar .logout-btn{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);
+ padding:6px 12px;border-radius:6px;margin-left:10px;font-size:12px}
+ .topbar .logout-btn:hover{background:rgba(255,255,255,.15)}
+
+ .layout{display:flex}
+ .sidebar{width:220px;background:#fff;border-right:1px solid var(--line);min-height:calc(100vh - 58px);padding:18px 0;}
+ .nav-item{display:flex;align-items:center;gap:10px;padding:11px 22px;color:var(--muted);
+ cursor:pointer;border-left:3px solid transparent;font-size:14px;transition:.15s;user-select:none}
+ .nav-item:hover{background:var(--cream);color:var(--ink)}
+ .nav-item.active{background:var(--cream);color:var(--brand);border-left-color:var(--brand);font-weight:600}
+ .nav-item .ico{width:20px;text-align:center}
+ .nav-divider{height:1px;background:var(--line);margin:12px 22px}
+ .nav-section-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;
+ padding:8px 22px 4px}
+
+ .content{flex:1;padding:24px 32px;max-width:calc(100% - 220px)}
+ .page-title{font-size:26px;color:var(--ink);margin:0 0 4px;font-weight:600;letter-spacing:.3px;border-bottom:2px solid var(--gold);padding-bottom:8px;display:inline-block}
+ .page-sub{color:var(--muted);font-size:13px;margin:8px 0 22px;font-style:italic}
+ .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+ .toolbar input,.toolbar select{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;outline:none}
+ .toolbar input:focus,.toolbar select:focus{border-color:var(--brand)}
+ .toolbar .grow{flex:1;min-width:200px}
+ .toolbar-spacer{flex:1}
+
+ /* ============== KPI Cards ============== */
+ .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px}
+ .kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);
+ border-left:4px solid var(--brand);}
+ .kpi.warn{border-left-color:var(--warn)}
+ .kpi.danger{border-left-color:var(--danger)}
+ .kpi.ok{border-left-color:var(--ok)}
+ .kpi.info{border-left-color:var(--info)}
+ .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+ .kpi .value{font-size:28px;font-weight:700;color:var(--ink)}
+ .kpi .sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+ /* ============== Cards / Panels ============== */
+ .panel{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+ margin-bottom:22px;overflow:hidden}
+ .panel-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+ .panel-head h3{margin:0;font-size:13px;color:var(--brand);font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+ .panel-body{padding:0}
+ .panel-body.padded{padding:18px}
+ .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px}
+ .empty .big{font-size:32px;margin-bottom:6px}
+
+ /* ============== Tables ============== */
+ table.tbl{width:100%;border-collapse:collapse}
+ table.tbl th{background:var(--cream);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;
+ color:var(--brand);text-align:left;padding:11px 14px;border-bottom:2px solid var(--gold);font-weight:700}
+ table.tbl td{padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+ table.tbl tr:hover td{background:#fefaf2}
+ table.tbl tr.late td{background:#fff5f5}
+ table.tbl tr.delivered td{opacity:.7}
+ table.tbl .row-actions{display:flex;gap:6px}
+ table.tbl .row-actions button{padding:5px 10px;font-size:11px;border-radius:6px;border:none}
+
+ /* ============== Badges / Chips ============== */
+ .badge{display:inline-block;padding:3px 9px;border-radius:11px;font-size:11px;font-weight:600;letter-spacing:.3px}
+ .badge.b-blue{background:#e0eaff;color:#1e3a8a}
+ .badge.b-amber{background:#fef3c7;color:#92400e}
+ .badge.b-purple{background:#ede9fe;color:#5b21b6}
+ .badge.b-green{background:#d1fae5;color:#065f46}
+ .badge.b-red{background:#fee2e2;color:#991b1b}
+ .badge.b-gray{background:#e5e7eb;color:#374151}
+ .badge.b-gold{background:#fef3c7;color:#7a4e0a}
+
+ .stage-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:14px;
+ font-size:11px;font-weight:600}
+ .stage-pill.s0{background:#e5e7eb;color:#374151}
+ .stage-pill.s1{background:#dbeafe;color:#1e40af}
+ .stage-pill.s2{background:#fde68a;color:#78350f}
+ .stage-pill.s3{background:#fed7aa;color:#9a3412}
+ .stage-pill.s4{background:#e9d5ff;color:#6b21a8}
+ .stage-pill.s5{background:#fbcfe8;color:#9d174d}
+ .stage-pill.s6{background:#bbf7d0;color:#14532d}
+
+ .late-tag{background:var(--danger);color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;
+ font-weight:700;letter-spacing:.5px;animation:pulse 2s ease-in-out infinite}
+ @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+
+ /* ============== Modals ============== */
+ .modal-bg{position:fixed;inset:0;background:rgba(40,20,10,.55);z-index:100;
+ display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+ .modal{background:#fff;border-radius:14px;width:100%;max-width:680px;box-shadow:var(--shadow-lg);
+ overflow:hidden;animation:slideIn .2s ease-out}
+ .modal.large{max-width:920px}
+ @keyframes slideIn{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+ .modal-head{padding:16px 22px;background:var(--brand);color:#fff;display:flex;justify-content:space-between;align-items:center}
+ .modal-head h3{margin:0;font-size:16px;font-weight:600}
+ .modal-head .close{background:transparent;color:#fff;border:none;font-size:22px;cursor:pointer;padding:0;width:30px;height:30px}
+ .modal-body{padding:22px;max-height:70vh;overflow-y:auto}
+ .modal-foot{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;background:#fafafa}
+ .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+ .form-grid .full{grid-column:1/-1}
+ .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+ /* ============== Order Detail ============== */
+ .detail-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
+ .detail-info dl{margin:0;display:grid;grid-template-columns:140px 1fr;gap:8px 14px;font-size:13px}
+ .detail-info dt{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+ .detail-info dd{margin:0;color:var(--ink);font-weight:500}
+
+ .stage-tracker{display:flex;align-items:center;justify-content:space-between;padding:18px;
+ background:linear-gradient(to right,#fff,#fdf8ee);border-radius:10px;margin-bottom:14px;overflow-x:auto}
+ .stage-step{display:flex;flex-direction:column;align-items:center;flex:1;min-width:80px;position:relative}
+ .stage-step .dot{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+ background:#fff;border:2px solid var(--line);color:var(--muted);font-weight:700;font-size:13px;z-index:2;cursor:pointer;transition:.15s}
+ .stage-step.done .dot{background:var(--ok);border-color:var(--ok);color:#fff}
+ .stage-step.current .dot{background:var(--brand);border-color:var(--brand);color:#fff;
+ box-shadow:0 0 0 4px rgba(122,62,46,.18)}
+ .stage-step .lbl{font-size:11px;margin-top:6px;color:var(--muted);text-align:center;font-weight:500}
+ .stage-step.done .lbl,.stage-step.current .lbl{color:var(--ink);font-weight:600}
+ .stage-step.line-after::after{content:"";position:absolute;top:17px;left:50%;width:100%;height:2px;background:var(--line);z-index:1}
+ .stage-step.done.line-after::after{background:var(--ok)}
+
+ .parts-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .part-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--cream);border-radius:6px;font-size:13px}
+ .part-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--brand)}
+ .part-row.done{opacity:.6;text-decoration:line-through}
+
+ .qc-list{display:grid;grid-template-columns:1fr;gap:6px}
+ .qc-row{display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--cream);border-radius:8px;border-left:3px solid var(--gold)}
+ .qc-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--ok);margin-top:1px}
+ .qc-row label{font-size:13px;cursor:pointer;flex:1}
+
+ /* ============== Notes Timeline ============== */
+ .timeline{padding:0;list-style:none;margin:0;border-left:2px solid var(--line);margin-left:8px}
+ .timeline li{padding:0 0 14px 18px;position:relative;font-size:13px}
+ .timeline li::before{content:"";position:absolute;left:-7px;top:4px;width:12px;height:12px;border-radius:50%;
+ background:var(--brand);border:2px solid #fff;box-shadow:0 0 0 1px var(--brand)}
+ .timeline .when{font-size:11px;color:var(--muted);margin-bottom:2px}
+ .timeline .who{font-weight:600;color:var(--brand)}
+
+ /* ============== Tasks ============== */
+ .task-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;
+ margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;box-shadow:var(--shadow);transition:.15s}
+ .task-card:hover{box-shadow:var(--shadow-lg)}
+ .task-card.done{opacity:.55}
+ .task-card input[type=checkbox]{width:20px;height:20px;accent-color:var(--ok);margin-top:2px;cursor:pointer}
+ .task-card .body{flex:1}
+ .task-card .title{font-weight:600;color:var(--ink);margin-bottom:4px}
+ .task-card.done .title{text-decoration:line-through;color:var(--muted)}
+ .task-card .meta{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+ .task-card .actions{display:flex;gap:6px}
+
+ /* ============== Misc ============== */
+ .alert{padding:12px 14px;border-radius:8px;margin-bottom:14px;font-size:13px;display:flex;gap:10px;align-items:center}
+ .alert.danger{background:#fee2e2;color:#7f1d1d;border:1px solid #fecaca}
+ .alert.warn{background:#fef3c7;color:#78350f;border:1px solid #fde68a}
+ .alert.info{background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe}
+ .alert.ok{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+
+ .toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 18px;
+ border-radius:8px;box-shadow:var(--shadow-lg);z-index:200;animation:slideUp .25s;font-size:13px}
+ .toast.success{background:var(--ok)}
+ .toast.error{background:var(--danger)}
+ @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+ .photo-thumb{width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid var(--line);cursor:pointer}
+ .order-num{font-family:'Courier New',monospace;font-weight:700;color:var(--brand)}
+ .small{font-size:11px;color:var(--muted)}
+ .right{text-align:right}
+ .center{text-align:center}
+
+ /* Print friendly */
+ @media print{.sidebar,.topbar,.toolbar,.btn{display:none!important}.content{padding:0;max-width:100%}}
+
+ /* Responsive */
+ @media(max-width:900px){
+ .layout{flex-direction:column}
+ .sidebar{width:100%;min-height:auto;display:flex;overflow-x:auto;padding:0}
+ .nav-item{flex-shrink:0;border-left:none;border-bottom:3px solid transparent}
+ .nav-item.active{border-left:none;border-bottom-color:var(--brand)}
+ .nav-divider,.nav-section-label{display:none}
+ .content{padding:16px;max-width:100%}
+ .detail-grid,.form-grid,.form-grid-3{grid-template-columns:1fr}
+ }
+</style>
+</head>
+<body>
+
+<!-- ============================== LOGIN SCREEN ============================== -->
+<div id="loginScreen" class="login-wrap">
+ <div class="login-card">
+ <div class="logo">TDF</div>
+ <h1>THE DECO FURNS</h1>
+ <div class="est">ESTABLISHED 1954</div>
+ <h2>Order Tracking System</h2>
+
+ <div class="field">
+ <label>Username</label>
+ <input id="loginUser" type="text" autocomplete="username" placeholder="owner / employee username" />
+ </div>
+ <div class="field">
+ <label>Password</label>
+ <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••" />
+ </div>
+ <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+ <div id="loginError" class="login-error"></div>
+ <div class="login-hint">
+ First time? Default owner login: <b>owner</b> / <b>admin123</b><br/>
+ Change the password from <b>Settings</b> after logging in.
+ </div>
+ </div>
+</div>
+
+<!-- ============================== APP SHELL ============================== -->
+<div id="app" class="app">
+ <!-- Topbar -->
+ <div class="topbar">
+ <div class="brand">
+ <div class="brand-logo">TDF</div>
+ <div>
+ <div>The Deco Furns</div>
+ <div class="est">EST. 1954 — ORDER TRACKER</div>
+ </div>
+ </div>
+ <div class="spacer"></div>
+ <div id="syncStatus" class="user-chip" style="margin-right:8px" title="Click to manage cloud sync" onclick="navigate('settings')">
+ <span id="syncDot" style="width:8px;height:8px;border-radius:50%;background:#888;display:inline-block"></span>
+ <span id="syncLabel">Local Only</span>
+ </div>
+ <div class="user-chip">
+ <span id="userName">—</span>
+ <span id="userRole" class="role-badge">—</span>
+ </div>
+ <button class="logout-btn" onclick="logout()">Logout</button>
+ </div>
+
+ <!-- Layout -->
+ <div class="layout">
+ <!-- Sidebar -->
+ <nav class="sidebar">
+ <div class="nav-section-label">Workspace</div>
+ <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">Dashboard</div>
+ <div class="nav-item" data-page="orders" onclick="navigate('orders')">Orders</div>
+ <div class="nav-item" data-page="tasks" onclick="navigate('tasks')">Daily Tasks</div>
+ <div class="nav-item" data-page="late" onclick="navigate('late')">Late Orders <span id="lateCount" class="badge b-red" style="margin-left:auto"></span></div>
+ <div class="nav-item" data-page="pipeline" onclick="navigate('pipeline')">Pipeline (by Stage)</div>
+ <div class="nav-item" data-page="deadlines" onclick="navigate('deadlines')">All Deadlines</div>
+ <div class="nav-item" data-page="stuck" onclick="navigate('stuck')">Stuck Orders <span id="stuckCount" class="badge b-amber" style="margin-left:auto"></span></div>
+ <div class="nav-divider"></div>
+ <div class="nav-section-label">Admin</div>
+ <div class="nav-item admin-only" data-page="employees" onclick="navigate('employees')">Employees</div>
+ <div class="nav-item admin-only" data-page="reports" onclick="navigate('reports')">Reports</div>
+ <div class="nav-item" data-page="settings" onclick="navigate('settings')">Settings</div>
+ </nav>
+
+ <!-- Content area -->
+ <main class="content" id="content"></main>
+ </div>
+</div>
+
+<!-- Modal Mount -->
+<div id="modalMount"></div>
+
+<script>
+/* ============================================================
+ THE DECO FURNS — ORDER TRACKING SYSTEM
+ Single-file HTML app. localStorage persistence.
+ ============================================================ */
+
+const STORAGE_KEY = 'tdf_order_tracker_v1';
+const STAGES = [
+ { id:0, name:"Order Received", short:"Received", color:"s0" },
+ { id:1, name:"Design (CorelDraw)", short:"Design", color:"s1" },
+ { id:2, name:"CNC Cutting", short:"CNC", color:"s2" },
+ { id:3, name:"Assembly / Fitting", short:"Assembly", color:"s3" },
+ { id:4, name:"Polish / Finishing", short:"Polish", color:"s4" },
+ { id:5, name:"Quality Check (QC)", short:"QC", color:"s5" },
+ { id:6, name:"Dispatch / Delivered", short:"Dispatch", color:"s6" }
+];
+
+const DEFAULT_PARTS = [
+ "Back Panel (Mandala + Shlok)",
+ "Top Crown / Pelmet",
+ "Left Front Pillar",
+ "Right Front Pillar",
+ "Left Side Panel (Jalli)",
+ "Right Side Panel (Jalli)",
+ "Bottom Cabinet Box",
+ "Drawer Front 1",
+ "Drawer Front 2",
+ "Side Bottom Panel — Ganesh",
+ "Side Bottom Panel — Lakshmi",
+ "Top Shelf / Plan Piece",
+ "Base / Floor"
+];
+
+const DEFAULT_QC = [
+ "Dimensions match order (W × H × D verified)",
+ "Design matches customer reference / approved drawing",
+ "Sanskrit shlok correctly engraved (no spelling errors)",
+ "Mandala / Om centered properly",
+ "All structural parts present and accounted for",
+ "No cracks, chips, or surface damage",
+ "Polish quality acceptable, even finish",
+ "Hangings (bells, lamps) and accessories included",
+ "Hardware (drawer handles, hinges) installed",
+ "Customer name / order no. on cover card matches",
+ "Final dispatch photos taken"
+];
+
+const ROLES = ["Owner","Manager","Designer","CNC Operator","Fabricator","Polisher","QC","Dispatcher","Sales"];
+
+/* ====== State ====== */
+let state = loadState();
+let currentUser = null;
+let currentPage = 'dashboard';
+let currentOrderId = null;
+
+function loadState(){
+ try{
+ const raw = localStorage.getItem(STORAGE_KEY);
+ if(raw) return JSON.parse(raw);
+ }catch(e){console.error(e);}
+ return {
+ employees:[
+ {id:1, name:"Owner", username:"owner", password:"admin123", role:"Owner", phone:"", active:true}
+ ],
+ orders:[],
+ tasks:[],
+ settings:{ companyName:"The Deco Furns", est:"1954" },
+ nextOrderId: 1001,
+ nextTaskId: 1,
+ nextEmpId: 2
+ };
+}
+function saveState(){
+ localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+ cloudPushDebounced();
+}
+
+/* ================================================================
+ CLOUD SYNC (Firebase Realtime Database)
+ ----------------------------------------------------------------
+ Optional. When the user pastes a Firebase config in Settings,
+ the app loads/saves data to a shared cloud DB so any device with
+ the same login + same hosted file sees the SAME data live.
+ When NOT configured, app runs in local-only mode (localStorage).
+ ================================================================ */
+const CLOUD_CONFIG_KEY = 'tdf_cloud_config_v1';
+let cloud = {
+ enabled: false,
+ app: null,
+ db: null,
+ ref: null,
+ workspaceId: 'tdf_workspace',
+ online: false,
+ lastPush: null,
+ applyingRemote: false,
+ pushTimer: null
+};
+
+function loadCloudConfig(){
+ try{
+ const raw = localStorage.getItem(CLOUD_CONFIG_KEY);
+ if(raw) return JSON.parse(raw);
+ }catch(e){}
+ return null;
+}
+function saveCloudConfig(cfg){ localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(cfg)); }
+function clearCloudConfig(){ localStorage.removeItem(CLOUD_CONFIG_KEY); }
+
+function setSyncStatus(label, color, online){
+ const lab = $('#syncLabel'), dot = $('#syncDot');
+ if(lab) lab.textContent = label;
+ if(dot) dot.style.background = color;
+ cloud.online = !!online;
+}
+
+async function initCloudIfConfigured(){
+ const cfg = loadCloudConfig();
+ if(!cfg || !cfg.firebaseConfig){
+ setSyncStatus('Local Only','#888',false);
+ return false;
+ }
+ if(typeof firebase==='undefined'){
+ setSyncStatus('Cloud SDK not loaded','#c1272d',false);
+ return false;
+ }
+ try{
+ if(firebase.apps && firebase.apps.length){
+ // Already initialized; reuse
+ cloud.app = firebase.app();
+ }else{
+ cloud.app = firebase.initializeApp(cfg.firebaseConfig);
+ }
+ cloud.db = firebase.database();
+ cloud.workspaceId = cfg.workspaceId || 'tdf_workspace';
+ cloud.ref = cloud.db.ref('tdf/'+cloud.workspaceId+'/state');
+ cloud.enabled = true;
+
+ // Connection monitoring
+ firebase.database().ref('.info/connected').on('value', snap=>{
+ if(snap.val()===true){
+ setSyncStatus('Cloud Synced','#1f8a4c',true);
+ }else{
+ setSyncStatus('Offline (cached)','#d97706',false);
+ }
+ });
+
+ // Initial fetch + listener
+ setSyncStatus('Connecting…','#2563eb',false);
+ const snap = await cloud.ref.once('value');
+ const remote = snap.val();
+ if(remote && remote.orders && remote.employees){
+ // Cloud has data → use it as source of truth
+ cloud.applyingRemote = true;
+ state = remote;
+ cloud.applyingRemote = false;
+ localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+ toast('Loaded latest data from cloud','success');
+ }else{
+ // Cloud empty → push current local data up
+ await cloud.ref.set(state);
+ toast('Initial sync to cloud','success');
+ }
+
+ // Real-time listener — re-render when remote changes
+ cloud.ref.on('value', snap=>{
+ const v = snap.val();
+ if(!v) return;
+ // Avoid re-applying our own writes
+ if(JSON.stringify(v)===JSON.stringify(state)) return;
+ cloud.applyingRemote = true;
+ state = v;
+ cloud.applyingRemote = false;
+ localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+ // Re-render the current page so updates appear instantly
+ try{ navigate(currentPage); }catch(e){}
+ refreshLateBadge();
+ });
+ return true;
+ }catch(e){
+ console.error('Cloud init failed:', e);
+ setSyncStatus('Cloud error','#c1272d',false);
+ toast('Cloud sync failed: '+e.message,'error');
+ return false;
+ }
+}
+
+function cloudPushDebounced(){
+ if(!cloud.enabled || !cloud.ref) return;
+ if(cloud.applyingRemote) return; // don't push remote-applied state back
+ clearTimeout(cloud.pushTimer);
+ cloud.pushTimer = setTimeout(async ()=>{
+ try{
+ await cloud.ref.set(state);
+ cloud.lastPush = new Date();
+ }catch(e){
+ console.error('Cloud push failed', e);
+ }
+ }, 350); // small debounce so rapid edits coalesce
+}
+
+async function disableCloud(){
+ if(cloud.ref){ try{ cloud.ref.off(); }catch(e){} }
+ if(firebase.database) try{ firebase.database().ref('.info/connected').off(); }catch(e){}
+ cloud.enabled = false; cloud.ref = null; cloud.db = null;
+ clearCloudConfig();
+ setSyncStatus('Local Only','#888',false);
+ toast('Cloud sync disabled. Using local storage only.','');
+}
+
+async function testCloudConnection(cfg){
+ if(typeof firebase==='undefined') throw new Error('Firebase SDK did not load (check internet connection)');
+ let testApp;
+ try{
+ // Use a separate temp app instance for testing
+ testApp = firebase.initializeApp(cfg.firebaseConfig, 'tdf_test_'+Date.now());
+ const db = testApp.database();
+ const r = db.ref('tdf/'+(cfg.workspaceId||'tdf_workspace')+'/_test');
+ await r.set({pingedAt: new Date().toISOString()});
+ await r.remove();
+ return true;
+ }finally{
+ if(testApp) try{ await testApp.delete(); }catch(e){}
+ }
+}
+
+/* ====== Utility ====== */
+function $(sel,el=document){return el.querySelector(sel);}
+function $$(sel,el=document){return Array.from(el.querySelectorAll(sel));}
+function fmtDate(d){if(!d)return "—";const x=new Date(d);if(isNaN(x))return d;return x.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}
+function fmtDateTime(d){if(!d)return "—";const x=new Date(d);if(isNaN(x))return d;return x.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function nowISO(){return new Date().toISOString();}
+function daysBetween(a,b){const d1=new Date(a),d2=new Date(b);return Math.round((d2-d1)/86400000);}
+function escapeHtml(s){if(s==null)return "";return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function toast(msg,type=""){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2700);}
+function isOwner(){return currentUser && currentUser.role==='Owner';}
+function isManager(){return currentUser && currentUser.role==='Manager';}
+function isAdmin(){return isOwner() || isManager();} // owner OR manager — both can manage orders/employees/tasks
+function canDoOwnerOnly(){return isOwner();} // only owner can clear all data, change owner password, remove owner
+function getEmpById(id){return state.employees.find(e=>e.id===id);}
+function getOrderById(id){return state.orders.find(o=>o.id===id);}
+
+/* ====== Auth ====== */
+function doLogin(){
+ const u = $('#loginUser').value.trim().toLowerCase();
+ const p = $('#loginPass').value;
+ const err = $('#loginError');
+ err.style.display='none';
+ const emp = state.employees.find(e=>e.username.toLowerCase()===u && e.password===p && e.active!==false);
+ if(!emp){
+ err.textContent="Invalid username or password.";
+ err.style.display='block';
+ return;
+ }
+ currentUser = emp;
+ $('#loginScreen').classList.add('hidden');
+ $('#app').style.display='block';
+ $('#userName').textContent = emp.name;
+ $('#userRole').textContent = emp.role;
+ $$('.admin-only').forEach(el=>el.style.display = isAdmin()?'':'none');
+ navigate('dashboard');
+ // Try to bring up cloud sync (if user has configured it)
+ initCloudIfConfigured().then(ok=>{
+ if(ok){
+ // Re-render with potentially updated remote data
+ navigate(currentPage);
+ }
+ });
+}
+function logout(){
+ currentUser=null;
+ $('#app').style.display='none';
+ $('#loginScreen').classList.remove('hidden');
+ $('#loginPass').value='';
+}
+
+/* ====== Navigation ====== */
+function navigate(page){
+ currentPage=page;
+ $$('.nav-item').forEach(el=>el.classList.toggle('active', el.dataset.page===page));
+ switch(page){
+ case 'dashboard': renderDashboard();break;
+ case 'orders': renderOrders();break;
+ case 'tasks': renderTasks();break;
+ case 'late': renderLate();break;
+ case 'pipeline': renderPipeline();break;
+ case 'deadlines': renderDeadlines();break;
+ case 'stuck': renderStuck();break;
+ case 'employees': if(isAdmin()) renderEmployees(); else renderForbidden();break;
+ case 'reports': if(isAdmin()) renderReports(); else renderForbidden();break;
+ case 'settings': renderSettings();break;
+ }
+ refreshLateBadge();
+}
+function renderForbidden(){
+ $('#content').innerHTML = `<div class="alert danger"><span class="alert-tag">ALERT</span> This page is restricted to the Owner or Manager.</div>`;
+}
+
+/* ====== Late / Stuck / Deadline helpers ====== */
+const STUCK_DAYS = 3; // order considered stuck if current stage hasn't progressed in this many days
+
+function isLate(o){
+ if(o.finalStatus==='delivered'||o.finalStatus==='cancelled') return false;
+ if(!o.deliveryDate) return false;
+ return new Date(o.deliveryDate) < new Date(new Date().toDateString());
+}
+function daysToDeadline(o){
+ if(!o.deliveryDate) return null;
+ return daysBetween(todayISO(), o.deliveryDate);
+}
+function deadlineLabel(o){
+ if(o.finalStatus==='delivered') return '<span class="badge b-green">Delivered ✓</span>';
+ if(o.finalStatus==='cancelled') return '<span class="badge b-gray">Cancelled</span>';
+ const d = daysToDeadline(o);
+ if(d===null) return '<span class="small">No deadline</span>';
+ if(d < 0) return `<span class="late-tag">${Math.abs(d)} day${Math.abs(d)>1?'s':''} LATE</span>`;
+ if(d === 0) return `<span class="badge b-red">Due TODAY</span>`;
+ if(d <= 2) return `<span class="badge b-red">${d} day${d>1?'s':''} left</span>`;
+ if(d <= 7) return `<span class="badge b-amber">${d} days left</span>`;
+ return `<span class="badge b-green">${d} days left</span>`;
+}
+function stageStartedAt(o){
+ const sn = (o.stageNotes||[]).find(s=>s.stageId===(o.currentStage||0));
+ return sn?sn.startedAt:null;
+}
+function daysOnCurrentStage(o){
+ const s = stageStartedAt(o);
+ if(!s) return 0;
+ // Normalize start to date-only so day count matches calendar days, not wall-clock hours
+ const startDate = new Date(s).toISOString().slice(0,10);
+ return Math.max(0, daysBetween(startDate, todayISO()));
+}
+function isStuck(o){
+ if(o.finalStatus!=='active') return false;
+ return daysOnCurrentStage(o) >= STUCK_DAYS;
+}
+function pendingParts(o){
+ const parts = (o.parts||[]).map(p => typeof p==='string'?{name:p,done:false}:p);
+ return parts.filter(p=>!p.done);
+}
+function pendingQC(o){
+ const qc = (o.qcChecklist||[]).map(q => typeof q==='string'?{text:q,checked:false}:q);
+ return qc.filter(q=>!q.checked);
+}
+function refreshLateBadge(){
+ const lateEl = $('#lateCount');
+ if(lateEl){
+ const n = state.orders.filter(isLate).length;
+ lateEl.textContent = n>0 ? n : '';
+ lateEl.style.display = n>0 ? '' : 'none';
+ }
+ const stuckEl = $('#stuckCount');
+ if(stuckEl){
+ const n = state.orders.filter(isStuck).length;
+ stuckEl.textContent = n>0 ? n : '';
+ stuckEl.style.display = n>0 ? '' : 'none';
+ }
+}
+
+/* ====== DASHBOARD ====== */
+function renderDashboard(){
+ const orders = state.orders;
+ const active = orders.filter(o=>o.finalStatus==='active');
+ const lateOrders = orders.filter(isLate);
+ const thisMonth = orders.filter(o=>{
+ if(!o.createdAt) return false;
+ const d=new Date(o.createdAt), n=new Date();
+ return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear();
+ });
+ const delivered = orders.filter(o=>o.finalStatus==='delivered');
+ const stageCounts = STAGES.map((s,i)=>({stage:s, n:active.filter(o=>(o.currentStage||0)===i).length}));
+
+ // Today's tasks for current user
+ const today = todayISO();
+ const myTasks = state.tasks.filter(t=>!t.completed && t.assignedTo===currentUser.id && (!t.dueDate||t.dueDate<=today));
+ const allOpenTasks = state.tasks.filter(t=>!t.completed);
+
+ $('#content').innerHTML = `
+ <h1 class="page-title">Welcome, ${escapeHtml(currentUser.name)}</h1>
+ <p class="page-sub">Here's what's happening at The Deco Furns today — ${fmtDate(today)}</p>
+
+ ${lateOrders.length>0 ? `
+ <div class="alert danger"><span class="alert-tag">ALERT</span>
+ <div><b>${lateOrders.length} order${lateOrders.length>1?'s are':' is'} LATE</b> — past delivery date and not yet dispatched.
+ <a href="#" onclick="navigate('late');return false;">View late orders →</a></div>
+ </div>` : ''
+ }
+ ${state.orders.filter(isStuck).length>0 ? `
+ <div class="alert warn"><span class="alert-tag">WARNING</span>
+ <div><b>${state.orders.filter(isStuck).length} order${state.orders.filter(isStuck).length>1?'s are':' is'} STUCK</b> — no progress for ${STUCK_DAYS}+ days.
+ <a href="#" onclick="navigate('stuck');return false;">View stuck orders →</a></div>
+ </div>` : ''
+ }
+ ${active.filter(o=>{const d=daysToDeadline(o);return d!==null && d>=0 && d<=2;}).length>0 ? `
+ <div class="alert info"><span class="alert-tag">NOTE</span>
+ <div><b>${active.filter(o=>{const d=daysToDeadline(o);return d!==null && d>=0 && d<=2;}).length} order${active.filter(o=>{const d=daysToDeadline(o);return d!==null && d>=0 && d<=2;}).length>1?'s are':' is'} due within 2 days.</b>
+ <a href="#" onclick="navigate('deadlines');return false;">View deadlines →</a></div>
+ </div>` : ''
+ }
+
+ <div class="kpi-grid">
+ <div class="kpi info"><div class="label">Active Orders</div><div class="value">${active.length}</div><div class="sub">in production</div></div>
+ <div class="kpi danger"><div class="label">Late</div><div class="value">${lateOrders.length}</div><div class="sub">past delivery date</div></div>
+ <div class="kpi warn"><div class="label">Stuck</div><div class="value">${state.orders.filter(isStuck).length}</div><div class="sub">no progress ${STUCK_DAYS}+ days</div></div>
+ <div class="kpi ok"><div class="label">Delivered</div><div class="value">${delivered.length}</div><div class="sub">all-time</div></div>
+ <div class="kpi"><div class="label">This Month</div><div class="value">${thisMonth.length}</div><div class="sub">new orders</div></div>
+ <div class="kpi"><div class="label">Open Tasks</div><div class="value">${allOpenTasks.length}</div><div class="sub">across all employees</div></div>
+ </div>
+
+ <div class="detail-grid">
+ <div>
+ <div class="panel">
+ <div class="panel-head">
+ <h3>Orders by Stage</h3>
+ <button class="btn btn-secondary" onclick="navigate('orders')" style="font-size:12px;padding:6px 12px">View All</button>
+ </div>
+ <div class="panel-body padded">
+ ${stageCounts.map(sc=>`
+ <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+ <span class="stage-pill ${sc.stage.color}" style="min-width:120px;justify-content:center">${escapeHtml(sc.stage.name)}</span>
+ <div style="flex:1;height:8px;background:var(--line);border-radius:4px;overflow:hidden">
+ <div style="height:100%;width:${active.length?(sc.n/active.length*100):0}%;background:var(--brand)"></div>
+ </div>
+ <b style="width:30px;text-align:right">${sc.n}</b>
+ </div>
+ `).join('')}
+ ${active.length===0?'<div class="empty">No active orders yet</div>':''}
+ </div>
+ </div>
+ </div>
+
+ <div>
+ <div class="panel">
+ <div class="panel-head">
+ <h3>My Tasks Today</h3>
+ <button class="btn btn-secondary" onclick="navigate('tasks')" style="font-size:12px;padding:6px 12px">View All</button>
+ </div>
+ <div class="panel-body padded">
+ ${myTasks.length===0?'<div class="empty">No tasks for today. Great job!</div>':
+ myTasks.slice(0,6).map(t=>renderTaskCard(t,true)).join('')
+ }
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Recent Activity</h3></div>
+ <div class="panel-body padded">
+ ${recentActivity()}
+ </div>
+ </div>
+ </div>
+ </div>
+ `;
+}
+
+function recentActivity(){
+ const events = [];
+ state.orders.forEach(o=>{
+ (o.history||[]).forEach(h=>events.push({...h, orderNo:o.orderNo, orderId:o.id}));
+ });
+ events.sort((a,b)=>new Date(b.at)-new Date(a.at));
+ if(events.length===0) return '<div class="empty">No activity yet</div>';
+ return '<ul class="timeline">'+events.slice(0,8).map(e=>`
+ <li>
+ <div class="when">${fmtDateTime(e.at)}</div>
+ <span class="who">${escapeHtml(e.byName||'—')}</span> — ${escapeHtml(e.action)}
+ ${e.orderNo?` on <a href="#" onclick="openOrder(${e.orderId});return false;">#${escapeHtml(e.orderNo)}</a>`:''}
+ ${e.details?` <span class="small">${escapeHtml(e.details)}</span>`:''}
+ </li>
+ `).join('')+'</ul>';
+}
+
+/* ====== ORDERS LIST ====== */
+let ordersFilter = { search:'', stage:'', salePerson:'', status:'active' };
+
+function renderOrders(){
+ const sales = [...new Set(state.orders.map(o=>o.salePerson).filter(Boolean))];
+ $('#content').innerHTML = `
+ <h1 class="page-title">Orders</h1>
+ <p class="page-sub">All orders for The Deco Furns. Click any row to view details, update stage, or run QC.</p>
+
+ <div class="toolbar">
+ <input id="fSearch" class="grow" type="text" placeholder="Search by order no, customer, phone, fabricator..." value="${escapeHtml(ordersFilter.search)}" />
+ <select id="fStatus">
+ <option value="active" ${ordersFilter.status==='active'?'selected':''}>Active</option>
+ <option value="delivered" ${ordersFilter.status==='delivered'?'selected':''}>Delivered</option>
+ <option value="cancelled" ${ordersFilter.status==='cancelled'?'selected':''}>Cancelled</option>
+ <option value="all" ${ordersFilter.status==='all'?'selected':''}>All</option>
+ </select>
+ <select id="fStage">
+ <option value="">All Stages</option>
+ ${STAGES.map(s=>`<option value="${s.id}" ${String(ordersFilter.stage)===String(s.id)?'selected':''}>${escapeHtml(s.name)}</option>`).join('')}
+ </select>
+ <select id="fSale">
+ <option value="">All Sale Persons</option>
+ ${sales.map(s=>`<option value="${escapeHtml(s)}" ${ordersFilter.salePerson===s?'selected':''}>${escapeHtml(s)}</option>`).join('')}
+ </select>
+ <button class="btn btn-primary" onclick="openOrderForm()">+ New Order</button>
+ </div>
+
+ <div class="panel">
+ <div class="panel-body" id="ordersTableMount"></div>
+ </div>
+ `;
+
+ $('#fSearch').oninput = e=>{ordersFilter.search=e.target.value;renderOrdersTable();};
+ $('#fStatus').onchange = e=>{ordersFilter.status=e.target.value;renderOrdersTable();};
+ $('#fStage').onchange = e=>{ordersFilter.stage=e.target.value;renderOrdersTable();};
+ $('#fSale').onchange = e=>{ordersFilter.salePerson=e.target.value;renderOrdersTable();};
+ renderOrdersTable();
+}
+function renderOrdersTable(){
+ let list = state.orders.slice();
+ if(ordersFilter.status!=='all') list = list.filter(o=>(o.finalStatus||'active')===ordersFilter.status);
+ if(ordersFilter.stage!=='') list = list.filter(o=>String(o.currentStage||0)===String(ordersFilter.stage));
+ if(ordersFilter.salePerson) list = list.filter(o=>o.salePerson===ordersFilter.salePerson);
+ if(ordersFilter.search){
+ const q = ordersFilter.search.toLowerCase();
+ list = list.filter(o=>
+ (o.orderNo||'').toLowerCase().includes(q) ||
+ (o.customerName||'').toLowerCase().includes(q) ||
+ (o.customerPhone||'').toLowerCase().includes(q) ||
+ (o.fabricator||'').toLowerCase().includes(q) ||
+ (o.salePerson||'').toLowerCase().includes(q)
+ );
+ }
+ list.sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0));
+
+ const html = list.length===0 ? `<div class="empty">No orders match your filters.<br><button class="btn btn-primary" style="margin-top:10px" onclick="openOrderForm()">+ Add First Order</button></div>` :
+ `<table class="tbl">
+ <thead>
+ <tr>
+ <th>Order No</th><th>Customer</th><th>Size (W×H×D)</th>
+ <th>Sale</th><th>Fabricator</th><th>Delivery / Deadline</th>
+ <th>Stage</th><th>On Stage</th><th>Pending</th><th></th>
+ </tr>
+ </thead>
+ <tbody>
+ ${list.map(o=>{
+ const stage = STAGES[o.currentStage||0];
+ const late = isLate(o);
+ const delivered = o.finalStatus==='delivered';
+ const stuck = isStuck(o);
+ const pending = pendingParts(o);
+ const onStage = daysOnCurrentStage(o);
+ return `<tr class="${late?'late':''} ${delivered?'delivered':''}" onclick="openOrder(${o.id})" style="cursor:pointer">
+ <td><span class="order-num">#${escapeHtml(o.orderNo||'')}</span><div class="small">SN ${escapeHtml(String(o.sn||''))}</div></td>
+ <td>
+ <div><b>${escapeHtml(o.customerName||'—')}</b></div>
+ <div class="small">${escapeHtml(o.customerPhone||'')}</div>
+ </td>
+ <td>${escapeHtml(o.width||'?')}×${escapeHtml(o.height||'?')}×${escapeHtml(o.depth||'?')}"</td>
+ <td>${escapeHtml(o.salePerson||'—')}</td>
+ <td>${escapeHtml(o.fabricator||'—')}</td>
+ <td>${fmtDate(o.deliveryDate)}<div style="margin-top:3px">${deadlineLabel(o)}</div></td>
+ <td><span class="stage-pill ${stage.color}">${escapeHtml(stage.short)}</span></td>
+ <td>${o.finalStatus==='active'?`<span class="${stuck?'late-tag':onStage>=2?'badge b-amber':'badge b-gray'}">${onStage} day${onStage===1?'':'s'}${stuck?' STUCK':''}</span>`:'—'}</td>
+ <td>${o.finalStatus==='active'?(pending.length>0?`<span class="badge b-amber">${pending.length} parts</span>`:'<span class="badge b-green">All cut</span>'):'—'}</td>
+ <td onclick="event.stopPropagation()">
+ <div class="row-actions">
+ <button class="btn btn-secondary" onclick="openOrder(${o.id})">View</button>
+ </div>
+ </td>
+ </tr>`;
+ }).join('')}
+ </tbody>
+ </table>`;
+ $('#ordersTableMount').innerHTML = html;
+}
+
+/* ====== ORDER FORM ====== */
+function openOrderForm(orderId){
+ const editing = !!orderId;
+ const o = editing ? getOrderById(orderId) : {
+ sn:state.orders.length+1,
+ orderNo:String(state.nextOrderId||1001),
+ orderDate:todayISO(),
+ deliveryDate:'',
+ type:'CORIAN TEMPLE',
+ currentStage:0,
+ finalStatus:'active'
+ };
+ showModal({
+ title:(editing?'Edit Order #':'New Order — Cover Card #')+escapeHtml(o.orderNo||''),
+ body:`
+ <div class="form-grid">
+ <div class="field"><label>S.N.</label><input id="f_sn" type="number" value="${o.sn||''}" /></div>
+ <div class="field"><label>Order No (4-digit)</label><input id="f_orderNo" type="text" value="${escapeHtml(o.orderNo||'')}" /></div>
+ <div class="field"><label>Order Date</label><input id="f_orderDate" type="date" value="${o.orderDate||''}" /></div>
+ <div class="field"><label>Delivery Date</label><input id="f_deliveryDate" type="date" value="${o.deliveryDate||''}" /></div>
+ <div class="full" style="border-top:1px solid var(--line);padding-top:8px;margin-top:4px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px">Customer</div>
+ <div class="field"><label>Customer Name</label><input id="f_custName" type="text" value="${escapeHtml(o.customerName||'')}" /></div>
+ <div class="field"><label>Phone</label><input id="f_custPhone" type="text" value="${escapeHtml(o.customerPhone||'')}" /></div>
+ <div class="field full"><label>Address / City</label><input id="f_custAddr" type="text" value="${escapeHtml(o.customerAddress||'')}" /></div>
+ <div class="full" style="border-top:1px solid var(--line);padding-top:8px;margin-top:4px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px">Mandir Specs</div>
+ <div class="field"><label>Width (inches)</label><input id="f_w" type="number" step="0.5" value="${o.width||''}" placeholder="e.g. 48" /></div>
+ <div class="field"><label>Height (inches)</label><input id="f_h" type="number" step="0.5" value="${o.height||''}" placeholder="e.g. 84" /></div>
+ <div class="field"><label>Depth (inches)</label><input id="f_d" type="number" step="0.5" value="${o.depth||''}" placeholder="e.g. 24" /></div>
+ <div class="field"><label>Type</label><input id="f_type" type="text" value="${escapeHtml(o.type||'CORIAN TEMPLE')}" /></div>
+ <div class="field"><label>Sale Person</label><input id="f_sale" type="text" list="dl_sales" value="${escapeHtml(o.salePerson||'')}" placeholder="SDP / SACHIN / ..." /><datalist id="dl_sales">${[...new Set(state.orders.map(x=>x.salePerson).filter(Boolean))].map(s=>`<option value="${escapeHtml(s)}">`).join('')}</datalist></div>
+ <div class="field"><label>Fabricator</label><input id="f_fab" type="text" list="dl_fab" value="${escapeHtml(o.fabricator||'')}" /><datalist id="dl_fab">${[...new Set(state.orders.map(x=>x.fabricator).filter(Boolean))].map(s=>`<option value="${escapeHtml(s)}">`).join('')}</datalist></div>
+ <div class="field full"><label>Special Instructions / Customisation Details</label>
+ <textarea id="f_special" rows="3" placeholder="E.g. Customer wants Gayatri Mantra in gold leaf, drawer fronts with Lakshmi panel, hanging bells with brass finish...">${escapeHtml(o.specialInstructions||'')}</textarea>
+ </div>
+ <div class="field full"><label>Reference Image (optional — customer's drawing/sample)</label>
+ <input id="f_refImg" type="file" accept="image/*" />
+ ${o.referenceImage?`<img src="${o.referenceImage}" class="photo-thumb" style="margin-top:8px" />`:''}
+ </div>
+ </div>
+ `,
+ onSave:()=>{
+ const data = {
+ sn: $('#f_sn').value,
+ orderNo: $('#f_orderNo').value.trim(),
+ orderDate: $('#f_orderDate').value,
+ deliveryDate: $('#f_deliveryDate').value,
+ customerName: $('#f_custName').value.trim(),
+ customerPhone: $('#f_custPhone').value.trim(),
+ customerAddress: $('#f_custAddr').value.trim(),
+ width: $('#f_w').value, height: $('#f_h').value, depth: $('#f_d').value,
+ type: $('#f_type').value.trim(),
+ salePerson: $('#f_sale').value.trim().toUpperCase(),
+ fabricator: $('#f_fab').value.trim(),
+ specialInstructions: $('#f_special').value.trim()
+ };
+ if(!data.orderNo){toast('Order No is required','error');return false;}
+ if(!data.customerName){toast('Customer name is required','error');return false;}
+ if(!data.deliveryDate){toast('Delivery date is required','error');return false;}
+
+ const fileEl = $('#f_refImg');
+ const finishSave = (refImg)=>{
+ if(editing){
+ Object.assign(o, data);
+ if(refImg) o.referenceImage = refImg;
+ o.updatedAt = nowISO();
+ o.history = o.history || [];
+ o.history.push({action:'Order edited', by:currentUser.id, byName:currentUser.name, at:nowISO()});
+ toast('Order updated','success');
+ }else{
+ const newOrder = {
+ id: Date.now(),
+ ...data,
+ referenceImage: refImg||null,
+ currentStage: 0,
+ finalStatus: 'active',
+ parts: DEFAULT_PARTS.map((p,i)=>({id:i,name:p,done:false,notes:''})),
+ qcChecklist: DEFAULT_QC.map((q,i)=>({id:i,text:q,checked:false})),
+ qcApproved:false, qcApprovedBy:null, qcApprovedAt:null, qcNotes:'',
+ stageNotes: STAGES.map(s=>({stageId:s.id, startedAt:null, completedAt:null, completedBy:null, notes:''})),
+ history:[{action:'Order created', by:currentUser.id, byName:currentUser.name, at:nowISO()}],
+ createdAt: nowISO(), updatedAt: nowISO()
+ };
+ newOrder.stageNotes[0].startedAt = nowISO();
+ state.orders.push(newOrder);
+ state.nextOrderId = (parseInt(data.orderNo)||state.nextOrderId)+1;
+ toast('Order created','success');
+ }
+ saveState();
+ renderOrders();
+ if(editing) renderOrderDetail(o.id);
+ };
+
+ if(fileEl && fileEl.files && fileEl.files[0]){
+ const reader = new FileReader();
+ reader.onload = e=>finishSave(e.target.result);
+ reader.readAsDataURL(fileEl.files[0]);
+ return false; // we'll close after async
+ }else{
+ finishSave(null);
+ }
+ }
+ });
+}
+
+/* ====== ORDER DETAIL ====== */
+function openOrder(id){
+ currentOrderId = id;
+ navigate('orders');
+ setTimeout(()=>renderOrderDetail(id),0);
+}
+function renderOrderDetail(id){
+ const o = getOrderById(id);
+ if(!o){renderOrders();return;}
+ const stage = STAGES[o.currentStage||0];
+ const late = isLate(o);
+
+ $('#content').innerHTML = `
+ <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+ <button class="btn btn-ghost" onclick="renderOrders()">← Back</button>
+ ${late?'<span class="late-tag">LATE</span>':''}
+ ${o.finalStatus==='delivered'?'<span class="badge b-green">DELIVERED ✓</span>':''}
+ ${o.finalStatus==='cancelled'?'<span class="badge b-gray">CANCELLED</span>':''}
+ </div>
+ <h1 class="page-title">Order #<span class="order-num">${escapeHtml(o.orderNo)}</span> — ${escapeHtml(o.customerName||'')}</h1>
+ <p class="page-sub">${escapeHtml(o.type||'CORIAN TEMPLE')} • ${escapeHtml(o.width||'?')}×${escapeHtml(o.height||'?')}×${escapeHtml(o.depth||'?')}" • Sale: ${escapeHtml(o.salePerson||'—')}</p>
+
+ <!-- Stage Tracker -->
+ <div class="panel">
+ <div class="panel-head"><h3>Production Stage</h3>
+ <div>
+ <button class="btn btn-secondary" onclick="openOrderForm(${o.id})">Edit Order</button>
+ ${o.finalStatus==='active' ? `<button class="btn btn-primary" onclick="advanceStage(${o.id})">${o.currentStage>=6?'Mark Delivered':'Advance to '+escapeHtml(STAGES[(o.currentStage||0)+1].short)} →</button>`:''}
+ </div>
+ </div>
+ <div class="panel-body padded">
+ <div class="stage-tracker">
+ ${STAGES.map((s,i)=>{
+ const cur = (o.currentStage||0);
+ const cls = i<cur?'done line-after':i===cur?'current line-after':(i<STAGES.length-1?'line-after':'');
+ return `<div class="stage-step ${cls}" onclick="setStage(${o.id},${i})" title="Click to set this stage">
+ <div class="dot">${i<cur?'✓':i+1}</div>
+ <div class="lbl">${escapeHtml(s.name)}</div>
+ </div>`;
+ }).join('')}
+ </div>
+ <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+ <button class="btn btn-secondary" onclick="addStageNote(${o.id})">Add Stage Note / Update</button>
+ <button class="btn btn-secondary" onclick="assignTaskFromOrder(${o.id})">Assign Task on this order</button>
+ ${o.finalStatus==='active' && o.currentStage>=5 ? `<button class="btn btn-warn" onclick="openQC(${o.id})">Run QC Checklist</button>`:''}
+ ${o.finalStatus==='active' ? `<button class="btn btn-danger" onclick="cancelOrder(${o.id})" style="margin-left:auto">Cancel Order</button>`:''}
+ </div>
+ </div>
+ </div>
+
+ <div class="detail-grid">
+ <div>
+ <!-- Info -->
+ <div class="panel">
+ <div class="panel-head"><h3> Order Details (Cover Card)</h3></div>
+ <div class="panel-body padded detail-info">
+ <dl>
+ <dt>S.N.</dt><dd>${escapeHtml(o.sn||'—')}</dd>
+ <dt>Order Date</dt><dd>${fmtDate(o.orderDate)}</dd>
+ <dt>Delivery Date</dt><dd>${fmtDate(o.deliveryDate)} ${late?'<span class="late-tag">LATE</span>':''}</dd>
+ <dt>Customer</dt><dd>${escapeHtml(o.customerName||'—')}</dd>
+ <dt>Phone</dt><dd>${escapeHtml(o.customerPhone||'—')}</dd>
+ <dt>Address</dt><dd>${escapeHtml(o.customerAddress||'—')}</dd>
+ <dt>Type</dt><dd>${escapeHtml(o.type||'—')}</dd>
+ <dt>Size</dt><dd>${escapeHtml(o.width||'?')} × ${escapeHtml(o.height||'?')} × ${escapeHtml(o.depth||'?')} inches</dd>
+ <dt>Sale Person</dt><dd>${escapeHtml(o.salePerson||'—')}</dd>
+ <dt>Fabricator</dt><dd>${escapeHtml(o.fabricator||'—')}</dd>
+ <dt>Special</dt><dd style="white-space:pre-wrap">${escapeHtml(o.specialInstructions||'—')}</dd>
+ </dl>
+ ${o.referenceImage?`<div style="margin-top:14px"><div class="small" style="margin-bottom:4px">Customer Reference Image</div><img src="${o.referenceImage}" style="max-width:100%;border-radius:6px;border:1px solid var(--line)" /></div>`:''}
+ </div>
+ </div>
+
+ <!-- Parts checklist -->
+ <div class="panel">
+ <div class="panel-head"><h3>Parts Checklist (CNC + Assembly)</h3>
+ <span class="small">${(o.parts||[]).filter(p=>p.done).length} / ${(o.parts||[]).length} done</span>
+ </div>
+ <div class="panel-body padded">
+ <div class="parts-grid">
+ ${(o.parts||DEFAULT_PARTS).map((p,i)=>{
+ const part = typeof p==='string'?{id:i,name:p,done:false}:p;
+ return `<label class="part-row ${part.done?'done':''}">
+ <input type="checkbox" ${part.done?'checked':''} onchange="togglePart(${o.id},${i},this.checked)" />
+ <span>${escapeHtml(part.name)}</span>
+ </label>`;
+ }).join('')}
+ </div>
+ </div>
+ </div>
+
+ <!-- QC -->
+ <div class="panel">
+ <div class="panel-head">
+ <h3>Quality Check (Prevents Galat Orders)</h3>
+ ${o.qcApproved?'<span class="badge b-green">QC PASSED</span>':'<span class="badge b-amber">Pending</span>'}
+ </div>
+ <div class="panel-body padded">
+ ${o.qcApproved?`<div class="alert ok"><span class="alert-tag">OK</span> QC approved by <b>${escapeHtml(o.qcApprovedByName||'—')}</b> on ${fmtDateTime(o.qcApprovedAt)}</div>`:''}
+ <div class="qc-list">
+ ${(o.qcChecklist||DEFAULT_QC).map((q,i)=>{
+ const qc = typeof q==='string'?{id:i,text:q,checked:false}:q;
+ return `<label class="qc-row">
+ <input type="checkbox" ${qc.checked?'checked':''} ${o.qcApproved?'disabled':''} onchange="toggleQC(${o.id},${i},this.checked)" />
+ <span>${escapeHtml(qc.text)}</span>
+ </label>`;
+ }).join('')}
+ </div>
+ <div style="margin-top:14px" class="field">
+ <label>QC Notes / Defects Found</label>
+ <textarea id="qcNotes_${o.id}" rows="2" ${o.qcApproved?'disabled':''} placeholder="Note any rework needed before dispatch...">${escapeHtml(o.qcNotes||'')}</textarea>
+ </div>
+ ${!o.qcApproved && o.finalStatus==='active'?`
+ <div style="display:flex;gap:8px;margin-top:8px">
+ <button class="btn btn-secondary" onclick="saveQCNotes(${o.id})">Save Notes</button>
+ <button class="btn btn-success" onclick="approveQC(${o.id})">Approve QC & Mark Ready for Dispatch</button>
+ </div>
+ `:''}
+ </div>
+ </div>
+ </div>
+
+ <div>
+ <!-- Stage notes timeline -->
+ <div class="panel">
+ <div class="panel-head"><h3>Stage Updates</h3></div>
+ <div class="panel-body padded">
+ ${(o.stageNotes||[]).filter(sn=>sn.notes||sn.startedAt||sn.completedAt).length===0
+ ? '<div class="empty">No stage updates yet. Click "Add Stage Note" to log progress.</div>'
+ : '<ul class="timeline">' + (o.stageNotes||[]).map(sn=>{
+ if(!sn.notes && !sn.startedAt && !sn.completedAt) return '';
+ const sName = STAGES[sn.stageId]?.name || '—';
+ const empName = sn.completedBy?getEmpById(sn.completedBy)?.name:'—';
+ return `<li>
+ <div class="when">${fmtDateTime(sn.completedAt||sn.startedAt)}</div>
+ <span class="who">${escapeHtml(sName)}</span>
+ ${sn.completedAt?` <span class="badge b-green">Completed</span>`:sn.startedAt?` <span class="badge b-blue">Started</span>`:''}
+ ${sn.completedBy?` by <b>${escapeHtml(empName)}</b>`:''}
+ ${sn.notes?`<div style="margin-top:3px;color:var(--muted)">${escapeHtml(sn.notes)}</div>`:''}
+ </li>`;
+ }).join('') + '</ul>'
+ }
+ </div>
+ </div>
+
+ <!-- Tasks linked to this order -->
+ <div class="panel">
+ <div class="panel-head"><h3>Tasks for this Order</h3>
+ <button class="btn btn-secondary" onclick="assignTaskFromOrder(${o.id})" style="font-size:12px;padding:6px 12px">+ Assign</button>
+ </div>
+ <div class="panel-body padded">
+ ${state.tasks.filter(t=>t.relatedOrderId===o.id).length===0
+ ? '<div class="empty">No tasks yet</div>'
+ : state.tasks.filter(t=>t.relatedOrderId===o.id).map(t=>renderTaskCard(t,false)).join('')
+ }
+ </div>
+ </div>
+
+ <!-- History -->
+ <div class="panel">
+ <div class="panel-head"><h3>Full History</h3></div>
+ <div class="panel-body padded">
+ ${(o.history||[]).length===0?'<div class="empty">No history</div>':
+ '<ul class="timeline">'+(o.history||[]).slice().reverse().map(h=>`
+ <li>
+ <div class="when">${fmtDateTime(h.at)}</div>
+ <span class="who">${escapeHtml(h.byName||'—')}</span> — ${escapeHtml(h.action)}
+ ${h.details?`<div class="small">${escapeHtml(h.details)}</div>`:''}
+ </li>
+ `).join('')+'</ul>'
+ }
+ </div>
+ </div>
+ </div>
+ </div>
+ `;
+}
+
+function setStage(orderId, stageIdx){
+ const o = getOrderById(orderId);
+ if(!o || o.finalStatus!=='active') return;
+ if(o.currentStage===stageIdx) return;
+ if(stageIdx===6 && !o.qcApproved){ if(!confirm('QC not yet approved. Move to Dispatch anyway?')) return; }
+ // mark previous as completed
+ const prev = o.stageNotes.find(sn=>sn.stageId===o.currentStage);
+ if(prev && !prev.completedAt){ prev.completedAt = nowISO(); prev.completedBy = currentUser.id; }
+ o.currentStage = stageIdx;
+ const cur = o.stageNotes.find(sn=>sn.stageId===stageIdx);
+ if(cur && !cur.startedAt){ cur.startedAt = nowISO(); }
+ o.history = o.history||[];
+ o.history.push({action:`Moved to ${STAGES[stageIdx].name}`, by:currentUser.id, byName:currentUser.name, at:nowISO()});
+ o.updatedAt = nowISO();
+ saveState();
+ renderOrderDetail(orderId);
+ toast('Stage updated','success');
+}
+function advanceStage(orderId){
+ const o = getOrderById(orderId);
+ if(!o) return;
+ if((o.currentStage||0) >= 6){
+ o.finalStatus = 'delivered';
+ o.deliveredAt = nowISO();
+ o.history.push({action:'Order DELIVERED', by:currentUser.id, byName:currentUser.name, at:nowISO()});
+ saveState();
+ renderOrderDetail(orderId);
+ toast('Order delivered! ','success');
+ return;
+ }
+ setStage(orderId, (o.currentStage||0)+1);
+}
+function cancelOrder(id){
+ if(!confirm('Cancel this order? This cannot be undone.')) return;
+ const o = getOrderById(id);
+ o.finalStatus = 'cancelled';
+ o.history.push({action:'Order CANCELLED', by:currentUser.id, byName:currentUser.name, at:nowISO()});
+ saveState();renderOrderDetail(id);toast('Order cancelled','');
+}
+function togglePart(orderId, idx, checked){
+ const o = getOrderById(orderId);
+ if(!o.parts) o.parts = DEFAULT_PARTS.map((p,i)=>({id:i,name:p,done:false}));
+ if(typeof o.parts[idx]==='string') o.parts[idx]={id:idx,name:o.parts[idx],done:false};
+ o.parts[idx].done = checked;
+ o.updatedAt = nowISO();
+ saveState();
+ renderOrderDetail(orderId);
+}
+function toggleQC(orderId, idx, checked){
+ const o = getOrderById(orderId);
+ if(!o.qcChecklist) o.qcChecklist = DEFAULT_QC.map((q,i)=>({id:i,text:q,checked:false}));
+ if(typeof o.qcChecklist[idx]==='string') o.qcChecklist[idx]={id:idx,text:o.qcChecklist[idx],checked:false};
+ o.qcChecklist[idx].checked = checked;
+ saveState();
+}
+function saveQCNotes(orderId){
+ const o = getOrderById(orderId);
+ o.qcNotes = $(`#qcNotes_${orderId}`).value;
+ saveState();
+ toast('QC notes saved','success');
+}
+function approveQC(orderId){
+ const o = getOrderById(orderId);
+ const allChecked = (o.qcChecklist||[]).every(q=>q.checked);
+ if(!allChecked){
+ if(!confirm('Not all QC items are checked. Approve anyway?')) return;
+ }
+ o.qcNotes = $(`#qcNotes_${orderId}`).value;
+ o.qcApproved = true;
+ o.qcApprovedBy = currentUser.id;
+ o.qcApprovedByName = currentUser.name;
+ o.qcApprovedAt = nowISO();
+ o.history.push({action:'QC APPROVED', by:currentUser.id, byName:currentUser.name, at:nowISO()});
+ saveState();
+ renderOrderDetail(orderId);
+ toast('QC approved! Ready for dispatch.','success');
+}
+function openQC(orderId){
+ const el = document.querySelector(`#qcNotes_${orderId}`);
+ if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function addStageNote(orderId){
+ const o = getOrderById(orderId);
+ showModal({
+ title:`Stage Update — ${STAGES[o.currentStage||0].name}`,
+ body:`
+ <div class="field"><label>Update / Note</label>
+ <textarea id="stageNoteInput" rows="4" placeholder="What was done? Any blockers? E.g. 'CNC cut completed for back panel and pillars. Drawer fronts pending due to design change.'"></textarea>
+ </div>
+ `,
+ onSave:()=>{
+ const note = $('#stageNoteInput').value.trim();
+ if(!note){toast('Please enter a note','error');return false;}
+ const sn = o.stageNotes.find(s=>s.stageId===(o.currentStage||0));
+ if(sn){
+ sn.notes = (sn.notes?sn.notes+'\n':'') + `[${fmtDateTime(nowISO())} by ${currentUser.name}] ${note}`;
+ }
+ o.history = o.history||[];
+ o.history.push({action:`Stage note added (${STAGES[o.currentStage||0].name})`, by:currentUser.id, byName:currentUser.name, at:nowISO(), details:note});
+ o.updatedAt = nowISO();
+ saveState();
+ renderOrderDetail(orderId);
+ toast('Update logged','success');
+ }
+ });
+}
+
+/* ====== TASKS ====== */
+let tasksFilter = 'open';
+function renderTasks(){
+ $('#content').innerHTML = `
+ <h1 class="page-title">Daily Tasks</h1>
+ <p class="page-sub">${isAdmin()?'Assign and track tasks for the team.':'Your assigned tasks for today.'}</p>
+ <div class="toolbar">
+ <select id="tFilter">
+ <option value="open" ${tasksFilter==='open'?'selected':''}>Open</option>
+ <option value="mine" ${tasksFilter==='mine'?'selected':''}>My Tasks Only</option>
+ <option value="completed" ${tasksFilter==='completed'?'selected':''}>Completed</option>
+ <option value="all" ${tasksFilter==='all'?'selected':''}>All</option>
+ </select>
+ <div class="toolbar-spacer"></div>
+ ${isAdmin()?'<button class="btn btn-primary" onclick="openTaskForm()">+ Assign Task</button>':''}
+ </div>
+ <div id="tasksMount"></div>
+ `;
+ $('#tFilter').onchange = e=>{tasksFilter=e.target.value;renderTasksList();};
+ renderTasksList();
+}
+function renderTasksList(){
+ let list = state.tasks.slice();
+ if(tasksFilter==='open') list = list.filter(t=>!t.completed);
+ if(tasksFilter==='mine') list = list.filter(t=>!t.completed && t.assignedTo===currentUser.id);
+ if(tasksFilter==='completed') list = list.filter(t=>t.completed);
+ list.sort((a,b)=>{
+ if(a.completed!==b.completed) return a.completed?1:-1;
+ return new Date(a.dueDate||'9999')-new Date(b.dueDate||'9999');
+ });
+ $('#tasksMount').innerHTML = list.length===0
+ ? `<div class="panel"><div class="empty">No tasks here.${isAdmin()?'<br><button class="btn btn-primary" style="margin-top:10px" onclick="openTaskForm()">+ Assign First Task</button>':''}</div></div>`
+ : list.map(t=>renderTaskCard(t,true)).join('');
+}
+function renderTaskCard(t, withActions){
+ const emp = getEmpById(t.assignedTo);
+ const order = t.relatedOrderId?getOrderById(t.relatedOrderId):null;
+ const overdue = !t.completed && t.dueDate && t.dueDate<todayISO();
+ const canEdit = isAdmin() || t.assignedTo===currentUser.id;
+ return `<div class="task-card ${t.completed?'done':''}">
+ <input type="checkbox" ${t.completed?'checked':''} ${!canEdit?'disabled':''} onchange="toggleTask(${t.id},this.checked)" />
+ <div class="body">
+ <div class="title">${escapeHtml(t.title)}</div>
+ ${t.description?`<div class="small" style="margin-bottom:6px;color:var(--muted)">${escapeHtml(t.description)}</div>`:''}
+ <div class="meta">
+ <span>${escapeHtml(emp?emp.name:'Unassigned')}</span>
+ ${t.dueDate?`<span class="${overdue?'late-tag':''}">Due: ${fmtDate(t.dueDate)}${overdue?' OVERDUE':''}</span>`:''}
+ ${order?`<span><a href="#" onclick="openOrder(${order.id});return false;">Order #${escapeHtml(order.orderNo)}</a></span>`:''}
+ ${t.priority?`<span class="badge ${t.priority==='High'?'b-red':t.priority==='Medium'?'b-amber':'b-gray'}">${escapeHtml(t.priority)}</span>`:''}
+ ${t.completed?`<span class="badge b-green">Done ${fmtDateTime(t.completedAt)}</span>`:''}
+ </div>
+ </div>
+ ${withActions && isAdmin() ? `<div class="actions">
+ <button class="btn btn-ghost" onclick="openTaskForm(${t.id})"></button>
+ <button class="btn btn-ghost" onclick="deleteTask(${t.id})"></button>
+ </div>`:''}
+ </div>`;
+}
+function toggleTask(id, checked){
+ const t = state.tasks.find(x=>x.id===id);
+ if(!t) return;
+ t.completed = checked;
+ t.completedAt = checked?nowISO():null;
+ t.completedBy = checked?currentUser.id:null;
+ saveState();
+ if(currentPage==='tasks') renderTasksList();
+ if(currentPage==='dashboard') renderDashboard();
+ toast(checked?'Task marked done ✓':'Task reopened','success');
+}
+function openTaskForm(taskId){
+ const editing = !!taskId;
+ const t = editing ? state.tasks.find(x=>x.id===taskId) : {dueDate:todayISO(),priority:'Medium'};
+ showModal({
+ title: editing?'Edit Task':'Assign Daily Task',
+ body:`
+ <div class="form-grid">
+ <div class="field full"><label>Task Title</label>
+ <input id="t_title" type="text" value="${escapeHtml(t.title||'')}" placeholder="e.g. Finish polishing for Order #1024" />
+ </div>
+ <div class="field full"><label>Description / Instructions</label>
+ <textarea id="t_desc" rows="3" placeholder="Specific instructions for the employee...">${escapeHtml(t.description||'')}</textarea>
+ </div>
+ <div class="field"><label>Assign To</label>
+ <select id="t_emp">
+ ${state.employees.filter(e=>e.active!==false).map(e=>`<option value="${e.id}" ${t.assignedTo===e.id?'selected':''}>${escapeHtml(e.name)} (${escapeHtml(e.role)})</option>`).join('')}
+ </select>
+ </div>
+ <div class="field"><label>Priority</label>
+ <select id="t_prio">
+ <option ${t.priority==='Low'?'selected':''}>Low</option>
+ <option ${t.priority==='Medium'?'selected':''}>Medium</option>
+ <option ${t.priority==='High'?'selected':''}>High</option>
+ </select>
+ </div>
+ <div class="field"><label>Due Date</label>
+ <input id="t_due" type="date" value="${t.dueDate||todayISO()}" />
+ </div>
+ <div class="field"><label>Related Order (optional)</label>
+ <select id="t_order">
+ <option value="">— None —</option>
+ ${state.orders.filter(o=>o.finalStatus==='active').map(o=>`<option value="${o.id}" ${t.relatedOrderId===o.id?'selected':''}>#${escapeHtml(o.orderNo)} — ${escapeHtml(o.customerName||'')}</option>`).join('')}
+ </select>
+ </div>
+ </div>
+ `,
+ onSave:()=>{
+ const title = $('#t_title').value.trim();
+ if(!title){toast('Title is required','error');return false;}
+ const data = {
+ title,
+ description: $('#t_desc').value.trim(),
+ assignedTo: parseInt($('#t_emp').value),
+ priority: $('#t_prio').value,
+ dueDate: $('#t_due').value,
+ relatedOrderId: $('#t_order').value?parseInt($('#t_order').value):null
+ };
+ if(editing){
+ Object.assign(t,data);
+ }else{
+ state.tasks.push({
+ id: state.nextTaskId++,
+ ...data,
+ assignedBy: currentUser.id,
+ completed:false,
+ createdAt: nowISO()
+ });
+ }
+ saveState();
+ if(currentPage==='tasks') renderTasksList();
+ else if(currentPage==='orders' && currentOrderId) renderOrderDetail(currentOrderId);
+ toast(editing?'Task updated':'Task assigned','success');
+ }
+ });
+}
+function deleteTask(id){
+ if(!confirm('Delete this task?')) return;
+ state.tasks = state.tasks.filter(t=>t.id!==id);
+ saveState();
+ renderTasksList();
+ toast('Task deleted','');
+}
+function assignTaskFromOrder(orderId){
+ openTaskForm();
+ setTimeout(()=>{ const sel=$('#t_order'); if(sel) sel.value=orderId; },50);
+}
+
+/* ====== LATE ORDERS ====== */
+function renderLate(){
+ const lateOrders = state.orders.filter(isLate).sort((a,b)=>new Date(a.deliveryDate)-new Date(b.deliveryDate));
+ $('#content').innerHTML = `
+ <h1 class="page-title">Late Orders</h1>
+ <p class="page-sub">Orders past their delivery date and not yet dispatched. Address these first.</p>
+ ${lateOrders.length===0?`
+ <div class="panel"><div class="empty">No late orders! All deliveries on track.</div></div>
+ `:`
+ <div class="panel">
+ <div class="panel-body">
+ <table class="tbl">
+ <thead><tr><th>Order No</th><th>Customer</th><th>Delivery Date</th><th>Days Late</th><th>Stage</th><th>Sale</th><th>Fabricator</th><th></th></tr></thead>
+ <tbody>
+ ${lateOrders.map(o=>{
+ const daysLate = daysBetween(o.deliveryDate, todayISO());
+ return `<tr class="late" onclick="openOrder(${o.id})" style="cursor:pointer">
+ <td><span class="order-num">#${escapeHtml(o.orderNo)}</span></td>
+ <td><b>${escapeHtml(o.customerName||'—')}</b><div class="small">${escapeHtml(o.customerPhone||'')}</div></td>
+ <td>${fmtDate(o.deliveryDate)}</td>
+ <td><span class="late-tag">${daysLate} days</span></td>
+ <td><span class="stage-pill ${STAGES[o.currentStage||0].color}">${escapeHtml(STAGES[o.currentStage||0].short)}</span></td>
+ <td>${escapeHtml(o.salePerson||'—')}</td>
+ <td>${escapeHtml(o.fabricator||'—')}</td>
+ <td onclick="event.stopPropagation()"><button class="btn btn-secondary" onclick="openOrder(${o.id})">View</button></td>
+ </tr>`;
+ }).join('')}
+ </tbody>
+ </table>
+ </div>
+ </div>
+ `}
+ `;
+}
+
+/* ====== PIPELINE (orders grouped by stage) ====== */
+function renderPipeline(){
+ const active = state.orders.filter(o=>o.finalStatus==='active');
+ const byStage = STAGES.map(s=>({stage:s, orders:active.filter(o=>(o.currentStage||0)===s.id)}));
+ $('#content').innerHTML = `
+ <h1 class="page-title">Production Pipeline</h1>
+ <p class="page-sub">All active orders grouped by current production stage. See exactly where each mandir is and what's pending.</p>
+
+ ${byStage.map(g=>`
+ <div class="panel">
+ <div class="panel-head">
+ <h3><span class="stage-pill ${g.stage.color}" style="margin-right:8px">${g.orders.length}</span> ${escapeHtml(g.stage.name)}</h3>
+ <span class="small">${g.orders.length} order${g.orders.length===1?'':'s'} on this stage</span>
+ </div>
+ <div class="panel-body">
+ ${g.orders.length===0 ? '<div class="empty" style="padding:18px">— no orders here —</div>' : `
+ <table class="tbl">
+ <thead><tr>
+ <th>Order No</th><th>Customer</th><th>Size</th><th>Sale</th>
+ <th>Delivery</th><th>Days on Stage</th><th>Pending Parts</th><th></th>
+ </tr></thead>
+ <tbody>${g.orders.sort((a,b)=>new Date(a.deliveryDate||'9999')-new Date(b.deliveryDate||'9999')).map(o=>{
+ const stuck = isStuck(o);
+ const onS = daysOnCurrentStage(o);
+ const pending = pendingParts(o);
+ return `<tr class="${isLate(o)?'late':''}" onclick="openOrder(${o.id})" style="cursor:pointer">
+ <td><span class="order-num">#${escapeHtml(o.orderNo||'')}</span></td>
+ <td><b>${escapeHtml(o.customerName||'—')}</b><div class="small">${escapeHtml(o.customerPhone||'')}</div></td>
+ <td>${escapeHtml(o.width||'?')}×${escapeHtml(o.height||'?')}×${escapeHtml(o.depth||'?')}"</td>
+ <td>${escapeHtml(o.salePerson||'—')}</td>
+ <td>${fmtDate(o.deliveryDate)}<div>${deadlineLabel(o)}</div></td>
+ <td>${stuck?`<span class="late-tag">${onS}d STUCK</span>`:`<span class="badge ${onS>=2?'b-amber':'b-gray'}">${onS} day${onS===1?'':'s'}</span>`}</td>
+ <td>${pending.length===0?'<span class="badge b-green">All ✓</span>':`<span class="badge b-amber">${pending.length}/${(o.parts||[]).length}</span><span class="small">${escapeHtml(pending.slice(0,2).map(p=>p.name).join(', '))}${pending.length>2?'…':''}</span>`}</td>
+ <td onclick="event.stopPropagation()"><button class="btn btn-secondary" onclick="openOrder(${o.id})">Open</button></td>
+ </tr>`;
+ }).join('')}</tbody>
+ </table>
+ `}
+ </div>
+ </div>
+ `).join('')}
+ `;
+}
+
+/* ====== DEADLINES (all active orders sorted by delivery) ====== */
+function renderDeadlines(){
+ const active = state.orders.filter(o=>o.finalStatus==='active')
+ .sort((a,b)=>new Date(a.deliveryDate||'9999')-new Date(b.deliveryDate||'9999'));
+ const overdue = active.filter(o=>{const d=daysToDeadline(o);return d!==null && d<0;});
+ const dueToday = active.filter(o=>daysToDeadline(o)===0);
+ const dueWeek = active.filter(o=>{const d=daysToDeadline(o);return d!==null && d>0 && d<=7;});
+ const later = active.filter(o=>{const d=daysToDeadline(o);return d===null || d>7;});
+
+ const tbl = (rows,emptyMsg)=> rows.length===0?`<div class="empty" style="padding:14px">${emptyMsg}</div>`:`
+ <table class="tbl">
+ <thead><tr>
+ <th>Order No</th><th>Customer</th><th>Size</th><th>Sale</th>
+ <th>Delivery Date</th><th>Time Left</th><th>Stage</th><th>Pending</th><th></th>
+ </tr></thead>
+ <tbody>${rows.map(o=>{
+ const stage = STAGES[o.currentStage||0];
+ const pending = pendingParts(o);
+ return `<tr class="${isLate(o)?'late':''}" onclick="openOrder(${o.id})" style="cursor:pointer">
+ <td><span class="order-num">#${escapeHtml(o.orderNo||'')}</span></td>
+ <td><b>${escapeHtml(o.customerName||'—')}</b><div class="small">${escapeHtml(o.customerPhone||'')}</div></td>
+ <td>${escapeHtml(o.width||'?')}×${escapeHtml(o.height||'?')}×${escapeHtml(o.depth||'?')}"</td>
+ <td>${escapeHtml(o.salePerson||'—')}</td>
+ <td>${fmtDate(o.deliveryDate)}</td>
+ <td>${deadlineLabel(o)}</td>
+ <td><span class="stage-pill ${stage.color}">${escapeHtml(stage.short)}</span></td>
+ <td>${pending.length===0?'<span class="badge b-green">All ✓</span>':`<span class="badge b-amber">${pending.length} parts</span>`}</td>
+ <td onclick="event.stopPropagation()"><button class="btn btn-secondary" onclick="openOrder(${o.id})">Open</button></td>
+ </tr>`;
+ }).join('')}</tbody>
+ </table>`;
+
+ $('#content').innerHTML = `
+ <h1 class="page-title">All Deadlines</h1>
+ <p class="page-sub">Every active order sorted by urgency. Tackle overdue first, then due-this-week.</p>
+
+ <div class="kpi-grid">
+ <div class="kpi danger"><div class="label">Overdue</div><div class="value">${overdue.length}</div></div>
+ <div class="kpi danger"><div class="label">Due Today</div><div class="value">${dueToday.length}</div></div>
+ <div class="kpi warn"><div class="label">Due This Week</div><div class="value">${dueWeek.length}</div></div>
+ <div class="kpi ok"><div class="label">Later / No Date</div><div class="value">${later.length}</div></div>
+ </div>
+
+ <div class="panel"><div class="panel-head"><h3>Overdue (Late)</h3></div><div class="panel-body">${tbl(overdue,'No overdue orders ')}</div></div>
+ <div class="panel"><div class="panel-head"><h3>Due Today</h3></div><div class="panel-body">${tbl(dueToday,'Nothing due today')}</div></div>
+ <div class="panel"><div class="panel-head"><h3>Due This Week (next 7 days)</h3></div><div class="panel-body">${tbl(dueWeek,'No orders due this week')}</div></div>
+ <div class="panel"><div class="panel-head"><h3>Later</h3></div><div class="panel-body">${tbl(later,'—')}</div></div>
+ `;
+}
+
+/* ====== STUCK ORDERS (no progress N+ days) ====== */
+function renderStuck(){
+ const stuck = state.orders.filter(isStuck)
+ .sort((a,b)=>daysOnCurrentStage(b)-daysOnCurrentStage(a));
+ $('#content').innerHTML = `
+ <h1 class="page-title">Stuck Orders</h1>
+ <p class="page-sub">Active orders that haven't moved to the next stage in <b>${STUCK_DAYS}+ days</b>. These need immediate attention.</p>
+ ${stuck.length===0?`
+ <div class="panel"><div class="empty">No stuck orders. Production is flowing.</div></div>
+ `:`
+ <div class="panel">
+ <div class="panel-body">
+ <table class="tbl">
+ <thead><tr><th>Order No</th><th>Customer</th><th>Stuck On Stage</th><th>Days Stuck</th><th>Delivery</th><th>Pending Parts</th><th>Fabricator</th><th></th></tr></thead>
+ <tbody>${stuck.map(o=>{
+ const stage = STAGES[o.currentStage||0];
+ const onS = daysOnCurrentStage(o);
+ const pending = pendingParts(o);
+ return `<tr class="late" onclick="openOrder(${o.id})" style="cursor:pointer">
+ <td><span class="order-num">#${escapeHtml(o.orderNo||'')}</span></td>
+ <td><b>${escapeHtml(o.customerName||'—')}</b><div class="small">${escapeHtml(o.customerPhone||'')}</div></td>
+ <td><span class="stage-pill ${stage.color}">${escapeHtml(stage.name)}</span></td>
+ <td><span class="late-tag">${onS} days</span></td>
+ <td>${fmtDate(o.deliveryDate)}<div>${deadlineLabel(o)}</div></td>
+ <td>${pending.length===0?'<span class="badge b-green">All cut</span>':`<span class="small">${escapeHtml(pending.map(p=>p.name).join(', '))}</span>`}</td>
+ <td>${escapeHtml(o.fabricator||'—')}</td>
+ <td onclick="event.stopPropagation()"><button class="btn btn-secondary" onclick="openOrder(${o.id})">Investigate</button></td>
+ </tr>`;
+ }).join('')}</tbody>
+ </table>
+ </div>
+ </div>
+ `}
+ `;
+}
+
+/* ====== EMPLOYEES ====== */
+function renderEmployees(){
+ $('#content').innerHTML = `
+ <h1 class="page-title">Employees</h1>
+ <p class="page-sub">Add or edit team members. Each employee gets a username + password to log in.</p>
+ <div class="toolbar">
+ <div class="toolbar-spacer"></div>
+ <button class="btn btn-primary" onclick="openEmpForm()">+ Add Employee</button>
+ </div>
+ <div class="panel">
+ <div class="panel-body">
+ <table class="tbl">
+ <thead><tr><th>Name</th><th>Role</th><th>Username</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+ <tbody>
+ ${state.employees.map(e=>`
+ <tr>
+ <td><b>${escapeHtml(e.name)}</b></td>
+ <td>${escapeHtml(e.role)}</td>
+ <td><code>${escapeHtml(e.username)}</code></td>
+ <td>${escapeHtml(e.phone||'—')}</td>
+ <td>${e.active===false?'<span class="badge b-gray">Inactive</span>':'<span class="badge b-green">Active</span>'}</td>
+ <td>
+ <div class="row-actions">
+ <button class="btn btn-secondary" onclick="openEmpForm(${e.id})">Edit</button>
+ ${e.role!=='Owner'?`<button class="btn btn-danger" onclick="deleteEmp(${e.id})">Remove</button>`:''}
+ </div>
+ </td>
+ </tr>
+ `).join('')}
+ </tbody>
+ </table>
+ </div>
+ </div>
+ `;
+}
+function openEmpForm(id){
+ const editing = !!id;
+ const e = editing?getEmpById(id):{role:'Designer',active:true};
+ showModal({
+ title: editing?'Edit Employee':'Add Employee',
+ body:`
+ <div class="form-grid">
+ <div class="field"><label>Full Name</label><input id="e_name" value="${escapeHtml(e.name||'')}" /></div>
+ <div class="field"><label>Role</label>
+ <select id="e_role">${ROLES.map(r=>`<option ${e.role===r?'selected':''}>${r}</option>`).join('')}</select>
+ </div>
+ <div class="field"><label>Username (for login)</label><input id="e_user" value="${escapeHtml(e.username||'')}" placeholder="lowercase, no spaces" /></div>
+ <div class="field"><label>${editing?'New Password (leave blank to keep)':'Password'}</label><input id="e_pass" type="text" value="" placeholder="${editing?'••••':''}" /></div>
+ <div class="field"><label>Phone</label><input id="e_phone" value="${escapeHtml(e.phone||'')}" /></div>
+ <div class="field"><label>Status</label>
+ <select id="e_active"><option value="true" ${e.active!==false?'selected':''}>Active</option><option value="false" ${e.active===false?'selected':''}>Inactive</option></select>
+ </div>
+ </div>
+ `,
+ onSave:()=>{
+ const name = $('#e_name').value.trim();
+ const username = $('#e_user').value.trim().toLowerCase();
+ const pass = $('#e_pass').value;
+ if(!name||!username){toast('Name and username required','error');return false;}
+ if(!editing && !pass){toast('Password required for new employee','error');return false;}
+ if(state.employees.some(x=>x.username===username && x.id!==(editing?id:-1))){
+ toast('Username already taken','error');return false;
+ }
+ const data = {
+ name,
+ username,
+ role: $('#e_role').value,
+ phone: $('#e_phone').value.trim(),
+ active: $('#e_active').value==='true'
+ };
+ if(pass) data.password = pass;
+ if(editing){
+ Object.assign(e,data);
+ }else{
+ state.employees.push({id:state.nextEmpId++,...data,password:pass});
+ }
+ saveState();
+ renderEmployees();
+ toast(editing?'Employee updated':'Employee added','success');
+ }
+ });
+}
+function deleteEmp(id){
+ const e = getEmpById(id);
+ if(e.role==='Owner'){toast('Cannot remove Owner','error');return;}
+ if(e.role==='Manager' && !isOwner()){toast('Only the Owner can remove a Manager','error');return;}
+ if(!confirm(`Remove ${e.name}? Their tasks will become unassigned.`)) return;
+ state.employees = state.employees.filter(x=>x.id!==id);
+ state.tasks.forEach(t=>{ if(t.assignedTo===id) t.assignedTo=null; });
+ saveState();
+ renderEmployees();
+ toast('Employee removed','');
+}
+
+/* ====== REPORTS ====== */
+function renderReports(){
+ const orders = state.orders;
+ const delivered = orders.filter(o=>o.finalStatus==='delivered');
+ const onTimeDelivered = delivered.filter(o=>o.deliveredAt && o.deliveryDate && new Date(o.deliveredAt)<=new Date(o.deliveryDate+'T23:59:59'));
+ const onTimeRate = delivered.length?Math.round(onTimeDelivered.length/delivered.length*100):0;
+
+ const empStats = state.employees.map(e=>{
+ const myTasks = state.tasks.filter(t=>t.assignedTo===e.id);
+ const myDone = myTasks.filter(t=>t.completed);
+ return {emp:e, total:myTasks.length, done:myDone.length, open:myTasks.length-myDone.length};
+ }).filter(s=>s.total>0);
+
+ const salesStats = {};
+ orders.forEach(o=>{
+ const sp = o.salePerson||'—';
+ salesStats[sp] = salesStats[sp]||{total:0,delivered:0,late:0,active:0};
+ salesStats[sp].total++;
+ if(o.finalStatus==='delivered') salesStats[sp].delivered++;
+ if(isLate(o)) salesStats[sp].late++;
+ if(o.finalStatus==='active') salesStats[sp].active++;
+ });
+
+ $('#content').innerHTML = `
+ <h1 class="page-title">Reports</h1>
+ <p class="page-sub">Performance and delivery insights for The Deco Furns.</p>
+
+ <div class="kpi-grid">
+ <div class="kpi info"><div class="label">Total Orders</div><div class="value">${orders.length}</div></div>
+ <div class="kpi ok"><div class="label">Delivered</div><div class="value">${delivered.length}</div></div>
+ <div class="kpi ${onTimeRate>=80?'ok':onTimeRate>=60?'warn':'danger'}"><div class="label">On-Time Rate</div><div class="value">${onTimeRate}%</div><div class="sub">${onTimeDelivered.length} of ${delivered.length} on time</div></div>
+ <div class="kpi danger"><div class="label">Currently Late</div><div class="value">${orders.filter(isLate).length}</div></div>
+ </div>
+
+ <div class="detail-grid">
+ <div class="panel">
+ <div class="panel-head"><h3>Employee Productivity</h3></div>
+ <div class="panel-body">
+ ${empStats.length===0?'<div class="empty">No tasks assigned yet</div>':`
+ <table class="tbl">
+ <thead><tr><th>Employee</th><th>Role</th><th>Tasks</th><th>Done</th><th>Open</th><th>%</th></tr></thead>
+ <tbody>${empStats.map(s=>{
+ const pct = s.total?Math.round(s.done/s.total*100):0;
+ return '<tr><td><b>'+escapeHtml(s.emp.name)+'</b></td><td>'+escapeHtml(s.emp.role)+'</td><td>'+s.total+'</td><td>'+s.done+'</td><td>'+s.open+'</td><td>'+pct+'%</td></tr>';
+ }).join('')}</tbody>
+ </table>`}
+ </div>
+ </div>
+ <div class="panel">
+ <div class="panel-head"><h3>Sales Person Performance</h3></div>
+ <div class="panel-body">
+ ${Object.keys(salesStats).length===0?'<div class="empty">No data yet</div>':`
+ <table class="tbl">
+ <thead><tr><th>Sale</th><th>Total</th><th>Active</th><th>Delivered</th><th>Late</th></tr></thead>
+ <tbody>${Object.entries(salesStats).map(([k,v])=>'<tr><td><b>'+escapeHtml(k)+'</b></td><td>'+v.total+'</td><td>'+v.active+'</td><td>'+v.delivered+'</td><td>'+(v.late>0?'<span class=\"badge b-red\">'+v.late+'</span>':'0')+'</td></tr>').join('')}</tbody>
+ </table>`}
+ </div>
+ </div>
+ </div>
+ `;
+}
+
+/* ====== SETTINGS (with Cloud Sync) ====== */
+function renderSettings(){
+ $('#content').innerHTML = `
+ <h1 class="page-title">Settings</h1>
+ <p class="page-sub">Account, cloud sync, and backup.</p>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Cloud Sync (Online — All Devices)</h3>
+ <span class="badge ${cloud.enabled?'b-green':'b-gray'}">${cloud.enabled?'CONNECTED':'NOT CONFIGURED'}</span>
+ </div>
+ <div class="panel-body padded">
+ <div class="alert info"><span class="alert-tag">NOTE</span>
+ <div>To use this software <b>online from any device anywhere</b>, connect it to a free Firebase database. One-time setup (~10 min). Once connected, every device that opens this app will see and update the SAME data live.<br/>
+ See <b>FIREBASE_SETUP_GUIDE.md</b> next to this file. &nbsp;|&nbsp;
+ <a href="https://console.firebase.google.com" target="_blank">Open Firebase Console</a></div>
+ </div>
+ ${cloud.enabled?`
+ <div class="alert ok"><span class="alert-tag">OK</span> Cloud sync is ON. Workspace: <b>${escapeHtml(cloud.workspaceId)}</b>.</div>
+ <button class="btn btn-danger" onclick="confirmDisableCloud()">Disable Cloud Sync</button>
+ `:`
+ <div class="field">
+ <label>Workspace ID (any name — must be the same on every device of your team)</label>
+ <input id="cloudWorkspace" type="text" value="tdf_workspace" placeholder="e.g. deco_furns_main" />
+ </div>
+ <div class="field">
+ <label>Firebase Config (paste the snippet from Firebase Console → Project Settings → Your apps → Web)</label>
+ <textarea id="cloudConfig" rows="8" style="font-family:'Courier New',monospace;font-size:12px" placeholder='{
+ "apiKey": "AIza...",
+ "authDomain": "your-project.firebaseapp.com",
+ "databaseURL": "https://your-project-default-rtdb.firebaseio.com",
+ "projectId": "your-project",
+ "appId": "1:..."
+}'></textarea>
+ </div>
+ <button class="btn btn-secondary" onclick="testCloudFromUI()">Test Connection</button>
+ <button class="btn btn-success" onclick="enableCloudFromUI()">Enable Cloud Sync</button>
+ `}
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Change My Password</h3></div>
+ <div class="panel-body padded">
+ <div class="form-grid">
+ <div class="field"><label>Current Password</label><input id="curPass" type="password" /></div>
+ <div class="field"><label>New Password</label><input id="newPass" type="password" /></div>
+ </div>
+ <button class="btn btn-primary" onclick="changeMyPassword()">Update Password</button>
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Load Demo Data</h3>
+ <span class="badge b-gold">FOR PRACTICE</span>
+ </div>
+ <div class="panel-body padded">
+ <div class="alert info"><span class="alert-tag">NOTE</span> Fills the system with realistic sample orders (some late, some stuck, some delivered), employees, and tasks so you can see how everything works before entering real data. Clear later from Danger Zone.</div>
+ <button class="btn btn-secondary" onclick="loadDemoData()">Load Demo Data Now</button>
+ </div>
+ </div>
+
+ <div class="panel">
+ <div class="panel-head"><h3>Backup & Restore</h3></div>
+ <div class="panel-body padded">
+ <div class="alert info"><span class="alert-tag">NOTE</span> Even with cloud sync ON, taking a JSON backup occasionally is a good safety habit.</div>
+ <button class="btn btn-success" onclick="exportData()">Export Backup (JSON)</button>
+ <label class="btn btn-secondary" style="margin-left:8px">Import Backup
+ <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)" />
+ </label>
+ <div style="margin-top:10px" class="small">Orders: ${state.orders.length}, tasks: ${state.tasks.length}, employees: ${state.employees.length}</div>
+ </div>
+ </div>
+
+ ${isOwner()?`
+ <div class="panel">
+ <div class="panel-head"><h3>Danger Zone (Owner only)</h3></div>
+ <div class="panel-body padded">
+ <div class="alert warn"><span class="alert-tag">WARNING</span> Permanent. Take a backup first.</div>
+ <button class="btn btn-danger" onclick="clearAllData()">Clear All Data (Reset System)</button>
+ </div>
+ </div>`:''}
+ `;
+}
+
+/* ====== Cloud Setup UI handlers ====== */
+function parseFirebaseConfig(raw){
+ raw = (raw||'').trim();
+ if(!raw) throw new Error('Paste the Firebase config object first');
+ const m = raw.match(/\{[\s\S]*\}/);
+ if(!m) throw new Error('Could not find a {...} config block');
+ let body = m[0];
+ body = body.replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":');
+ body = body.replace(/'/g, '"');
+ body = body.replace(/,\s*([}\]])/g, '$1');
+ let cfg;
+ try{ cfg = JSON.parse(body); }
+ catch(e){ throw new Error('Could not parse config: '+e.message); }
+ if(!cfg.apiKey || !cfg.databaseURL){
+ throw new Error('Config missing apiKey or databaseURL. Make sure you enabled Realtime Database in Firebase Console.');
+ }
+ return cfg;
+}
+
+async function testCloudFromUI(){
+ try{
+ const raw = $('#cloudConfig').value;
+ const ws = ($('#cloudWorkspace').value||'tdf_workspace').trim();
+ const cfg = parseFirebaseConfig(raw);
+ toast('Testing connection...','');
+ await testCloudConnection({firebaseConfig:cfg, workspaceId:ws});
+ toast('Connection works! Click Enable Cloud Sync to turn it on.','success');
+ }catch(e){
+ toast('Test failed: '+e.message,'error');
+ }
+}
+async function enableCloudFromUI(){
+ try{
+ const raw = $('#cloudConfig').value;
+ const ws = ($('#cloudWorkspace').value||'tdf_workspace').trim();
+ const cfg = parseFirebaseConfig(raw);
+ await testCloudConnection({firebaseConfig:cfg, workspaceId:ws});
+ saveCloudConfig({firebaseConfig:cfg, workspaceId:ws});
+ toast('Enabling cloud sync...','success');
+ await initCloudIfConfigured();
+ renderSettings();
+ }catch(e){
+ toast('Enable failed: '+e.message,'error');
+ }
+}
+function confirmDisableCloud(){
+ if(!confirm('Disable cloud sync? Your data stays in this browser, but it will no longer sync to other devices.')) return;
+ disableCloud();
+ renderSettings();
+}
+
+/* ====== Password / Backup ====== */
+function changeMyPassword(){
+ const cur = $('#curPass').value;
+ const nv = $('#newPass').value;
+ if(currentUser.password!==cur){toast('Current password incorrect','error');return;}
+ if(!nv || nv.length<4){toast('New password must be at least 4 characters','error');return;}
+ currentUser.password = nv;
+ const e = state.employees.find(x=>x.id===currentUser.id);
+ if(e) e.password = nv;
+ saveState();
+ toast('Password updated','success');
+ $('#curPass').value=''; $('#newPass').value='';
+}
+function exportData(){
+ const blob = new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+ const a = document.createElement('a');
+ a.href = URL.createObjectURL(blob);
+ a.download = 'tdf_backup_'+new Date().toISOString().slice(0,10)+'.json';
+ a.click();
+ toast('Backup downloaded','success');
+}
+function importData(input){
+ const f = input.files[0];
+ if(!f) return;
+ if(!confirm('Importing will REPLACE all current data. Continue?')) return;
+ const reader = new FileReader();
+ reader.onload = e=>{
+ try{
+ const obj = JSON.parse(e.target.result);
+ if(!obj.orders||!obj.employees){throw new Error('Invalid file');}
+ state = obj;
+ saveState();
+ toast('Data restored','success');
+ logout();
+ }catch(err){toast('Invalid backup file','error');}
+ };
+ reader.readAsText(f);
+}
+function clearAllData(){
+ if(!confirm('Erase ALL data permanently?')) return;
+ if(!confirm('Are you absolutely sure? This cannot be undone.')) return;
+ localStorage.removeItem(STORAGE_KEY);
+ location.reload();
+}
+
+
+/* ====== Load realistic demo data ====== */
+function loadDemoData(){
+ if(state.orders.length>0 || state.tasks.length>0){
+  if(!confirm('This will REPLACE current data with demo data. Continue?')) return;
+ }
+ const today = new Date();
+ const daysAgo = n => new Date(today.getTime() - n*86400000).toISOString();
+ const dateAgo = n => daysAgo(n).slice(0,10);
+ const daysAhead = n => new Date(today.getTime() + n*86400000).toISOString().slice(0,10);
+
+ const employees = [
+  {id:1, name:'Gurjot Singh',  username:'owner',   password:'admin123', role:'Owner',         phone:'9818000001', active:true},
+  {id:2, name:'Rajesh Kumar',  username:'rajesh',  password:'pass123',  role:'Manager',       phone:'9818000002', active:true},
+  {id:3, name:'Sandeep Sharma',username:'sdp',     password:'pass123',  role:'Sales',         phone:'9818000003', active:true},
+  {id:4, name:'Sachin Verma',  username:'sachin',  password:'pass123',  role:'Sales',         phone:'9818000004', active:true},
+  {id:5, name:'Mukesh Singh',  username:'mukesh',  password:'pass123',  role:'Designer',      phone:'9818000005', active:true},
+  {id:6, name:'Ramesh Yadav',  username:'ramesh',  password:'pass123',  role:'CNC Operator',  phone:'9818000006', active:true},
+  {id:7, name:'Suresh Pal',    username:'suresh',  password:'pass123',  role:'Fabricator',    phone:'9818000007', active:true},
+  {id:8, name:'Kishan Lal',    username:'kishan',  password:'pass123',  role:'Polisher',      phone:'9818000008', active:true},
+  {id:9, name:'Vikram Singh',  username:'vikram',  password:'pass123',  role:'QC',            phone:'9818000009', active:true},
+  {id:10,name:'Deepak Mehra',  username:'deepak',  password:'pass123',  role:'Dispatcher',    phone:'9818000010', active:true}
+ ];
+
+ const mkOrder = (cfg) => {
+  const stageStartDay = cfg.stageStartedDaysAgo || 0;
+  return {
+   id: cfg.id,
+   sn: cfg.sn,
+   orderNo: cfg.orderNo,
+   orderDate: dateAgo(cfg.orderedDaysAgo),
+   deliveryDate: cfg.delivery,
+   customerName: cfg.customer,
+   customerPhone: cfg.phone,
+   customerAddress: cfg.address || 'New Delhi',
+   width: cfg.w, height: cfg.h, depth: cfg.d,
+   type: 'CORIAN TEMPLE',
+   salePerson: cfg.sale,
+   fabricator: cfg.fab,
+   specialInstructions: cfg.special || '',
+   currentStage: cfg.stage,
+   finalStatus: cfg.status || 'active',
+   parts: DEFAULT_PARTS.map((p,i)=>({id:i,name:p,done:cfg.partsDone>i})),
+   qcChecklist: DEFAULT_QC.map((q,i)=>({id:i,text:q,checked:(cfg.qcChecked||0)>i})),
+   qcApproved: cfg.qcApproved||false,
+   qcApprovedBy: cfg.qcApproved?9:null,
+   qcApprovedByName: cfg.qcApproved?'Vikram Singh':null,
+   qcApprovedAt: cfg.qcApproved?daysAgo(1):null,
+   qcNotes: cfg.qcNotes||'',
+   stageNotes: STAGES.map(s=>({
+    stageId: s.id,
+    startedAt: s.id<=cfg.stage?daysAgo(stageStartDay + (cfg.stage-s.id)*2):null,
+    completedAt: s.id<cfg.stage?daysAgo(stageStartDay + (cfg.stage-s.id-1)*2):null,
+    completedBy: s.id<cfg.stage?(s.id+5):null,
+    notes: (cfg.stageNotes && cfg.stageNotes[s.id]) || ''
+   })),
+   history: [
+    {action:'Order created', by:1, byName:'Gurjot Singh', at:dateAgo(cfg.orderedDaysAgo)+'T10:00:00.000Z'}
+   ],
+   createdAt: dateAgo(cfg.orderedDaysAgo)+'T10:00:00.000Z',
+   updatedAt: daysAgo(0),
+   deliveredAt: cfg.status==='delivered'?daysAgo(0):null
+  };
+ };
+
+ const orders = [
+  mkOrder({id:1001, sn:1, orderNo:'1024', orderedDaysAgo:25, delivery:dateAgo(5), customer:'Sharma Ji', phone:'9876543210', w:48,h:84,d:24, sale:'SDP', fab:'Suresh Pal', stage:2, partsDone:5, stageStartedDaysAgo:5, special:'Customer wants Gayatri Mantra in gold leaf, hanging bells brass finish'}),
+  mkOrder({id:1002, sn:2, orderNo:'1025', orderedDaysAgo:18, delivery:dateAgo(2), customer:'Verma Family', phone:'9876543211', w:33,h:72,d:24, sale:'SACHIN', fab:'Suresh Pal', stage:3, partsDone:13, stageStartedDaysAgo:2, special:'Drawer fronts with Lakshmi panel'}),
+  mkOrder({id:1003, sn:3, orderNo:'1026', orderedDaysAgo:30, delivery:dateAgo(8), customer:'Aggarwal House', phone:'9876543212', w:48,h:96,d:30, sale:'SDP', fab:'Suresh Pal', stage:1, partsDone:0, stageStartedDaysAgo:6, special:'Large mandir for Gurgaon villa'}),
+  mkOrder({id:1004, sn:4, orderNo:'1027', orderedDaysAgo:14, delivery:daysAhead(7), customer:'Khanna Sahab', phone:'9876543213', w:36,h:72,d:20, sale:'SACHIN', fab:'Ramesh Yadav', stage:4, partsDone:13, qcChecked:5, stageStartedDaysAgo:1, special:'Standard temple, no engraving'}),
+  mkOrder({id:1005, sn:5, orderNo:'1028', orderedDaysAgo:10, delivery:daysAhead(14), customer:'Mehta Residence', phone:'9876543214', w:42,h:78,d:24, sale:'SDP', fab:'Suresh Pal', stage:0, partsDone:0, stageStartedDaysAgo:1, special:'Awaiting design confirmation from customer'}),
+  mkOrder({id:1006, sn:6, orderNo:'1029', orderedDaysAgo:7, delivery:daysAhead(21), customer:'Bansal Family', phone:'9876543215', w:48,h:84,d:24, sale:'SACHIN', fab:'Ramesh Yadav', stage:0, partsDone:0, stageStartedDaysAgo:0, special:''}),
+  mkOrder({id:1007, sn:7, orderNo:'1030', orderedDaysAgo:5, delivery:daysAhead(0), customer:'Saxena Ji', phone:'9876543216', w:36,h:72,d:20, sale:'SDP', fab:'Suresh Pal', stage:5, partsDone:13, qcChecked:11, stageStartedDaysAgo:1, special:'Rush order for Diwali'}),
+  mkOrder({id:1008, sn:8, orderNo:'1023', orderedDaysAgo:40, delivery:dateAgo(12), customer:'Kapoor Sahab', phone:'9876543217', w:33,h:72,d:24, sale:'SDP', fab:'Suresh Pal', stage:6, partsDone:13, qcChecked:11, qcApproved:true, status:'delivered', stageStartedDaysAgo:0}),
+  mkOrder({id:1009, sn:9, orderNo:'1022', orderedDaysAgo:50, delivery:dateAgo(20), customer:'Gupta Residence', phone:'9876543218', w:48,h:84,d:24, sale:'SACHIN', fab:'Ramesh Yadav', stage:6, partsDone:13, qcChecked:11, qcApproved:true, status:'delivered', stageStartedDaysAgo:0}),
+  mkOrder({id:1010,sn:10,orderNo:'1031', orderedDaysAgo:3, delivery:daysAhead(28), customer:'Singh Family', phone:'9876543219', w:60,h:96,d:30, sale:'SDP', fab:'Suresh Pal', stage:0, partsDone:0, stageStartedDaysAgo:0, special:'Premium order — extra carving on side panels'})
+ ];
+
+ const tasks = [
+  {id:1, title:'Finish back panel CNC for Order #1024', description:'Mandala + Gayatri shlok engraving on back panel.', assignedTo:6, assignedBy:1, dueDate:dateAgo(1), priority:'High', completed:false, relatedOrderId:1001, createdAt:daysAgo(2)},
+  {id:2, title:'Polish completed for Order #1027', description:'Final polish on all assembled parts.', assignedTo:8, assignedBy:2, dueDate:daysAhead(2), priority:'Medium', completed:false, relatedOrderId:1004, createdAt:daysAgo(1)},
+  {id:3, title:'Run QC on Order #1030', description:'Verify dimensions, mandala centering, no defects.', assignedTo:9, assignedBy:1, dueDate:daysAhead(0), priority:'High', completed:false, relatedOrderId:1007, createdAt:daysAgo(1)},
+  {id:4, title:'Call Aggarwal House for design confirmation', description:'Need approval before CNC. Order #1026 stuck waiting.', assignedTo:3, assignedBy:1, dueDate:daysAhead(0), priority:'High', completed:false, relatedOrderId:1003, createdAt:daysAgo(2)},
+  {id:5, title:'Dispatch Order #1023 to Kapoor Sahab', description:'Schedule courier and confirm address.', assignedTo:10, assignedBy:1, dueDate:dateAgo(0), priority:'Medium', completed:true, completedAt:daysAgo(0), completedBy:10, relatedOrderId:1008, createdAt:daysAgo(2)},
+  {id:6, title:'Design CorelDraw file for Order #1027', description:'Standard temple, customer approved.', assignedTo:5, assignedBy:2, dueDate:dateAgo(7), priority:'Medium', completed:true, completedAt:daysAgo(6), completedBy:5, relatedOrderId:1004, createdAt:daysAgo(10)},
+  {id:7, title:'CNC cut Order #1025 drawer fronts', description:'Lakshmi panel design — careful with detail.', assignedTo:6, assignedBy:1, dueDate:dateAgo(3), priority:'High', completed:true, completedAt:daysAgo(3), completedBy:6, relatedOrderId:1002, createdAt:daysAgo(5)},
+  {id:8, title:'Initial customer drawing for Order #1031', description:'Singh Family — premium with extra carving.', assignedTo:5, assignedBy:1, dueDate:daysAhead(3), priority:'Medium', completed:false, relatedOrderId:1010, createdAt:daysAgo(0)}
+ ];
+
+ state = {
+  employees, orders, tasks,
+  settings:{ companyName:'The Deco Furns', est:'1954' },
+  nextOrderId: 1032, nextTaskId: 9, nextEmpId: 11
+ };
+ saveState();
+ toast('Demo data loaded — '+orders.length+' orders, '+employees.length+' employees, '+tasks.length+' tasks','success');
+ navigate('dashboard');
+}
+
+/* ====== MODAL ====== */
+function showModal({title, body, onSave, large=false}){
+ const m = document.createElement('div');
+ m.className='modal-bg';
+ m.innerHTML = `
+  <div class="modal ${large?'large':''}">
+   <div class="modal-head"><h3>${title}</h3><button class="close" onclick="this.closest('.modal-bg').remove()">×</button></div>
+   <div class="modal-body">${body}</div>
+   <div class="modal-foot">
+    <button class="btn btn-ghost" onclick="this.closest('.modal-bg').remove()">Cancel</button>
+    <button class="btn btn-primary" id="modalSave">Save</button>
+   </div>
+  </div>
+ `;
+ document.body.appendChild(m);
+ m.querySelector('#modalSave').onclick = ()=>{
+  const result = onSave();
+  if(result!==false) m.remove();
+ };
+ m.addEventListener('click',e=>{ if(e.target===m) m.remove(); });
+}
+
+/* ====== Init ====== */
+window.addEventListener('keydown',e=>{
+ if(e.key==='Enter' && !$('#loginScreen').classList.contains('hidden')){
+  if(document.activeElement.id==='loginUser' || document.activeElement.id==='loginPass') doLogin();
+ }
+});
+window.addEventListener('load',()=>{
+ const u=$('#loginUser');
+ if(u) u.focus();
+ if(loadCloudConfig()) setSyncStatus('Cloud Configured','#1f4378',false);
+ else setSyncStatus('Local Only','#888',false);
+});
+</script>
+</body>
+</html>
